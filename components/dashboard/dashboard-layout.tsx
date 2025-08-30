@@ -10,6 +10,7 @@ import { LogOut, Menu, X } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { AICopilot } from "./ai-copilot"
 import { ThemeToggle } from "@/components/theme-toggle"
+import { toast } from "sonner"
 
 interface Note {
   id: string
@@ -38,6 +39,10 @@ export function DashboardLayout({ user }: DashboardLayoutProps) {
   const [selectedFolder, setSelectedFolder] = useState<string | null>(null)
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [isLoading, setIsLoading] = useState(true)
+  const [isCreatingNote, setIsCreatingNote] = useState(false)
+  const [isCreatingFolder, setIsCreatingFolder] = useState(false)
+  const [isDeletingNote, setIsDeletingNote] = useState<string | null>(null)
+  const [isDeletingFolder, setIsDeletingFolder] = useState<string | null>(null)
   const router = useRouter()
   const supabase = createClient()
 
@@ -74,94 +79,136 @@ export function DashboardLayout({ user }: DashboardLayoutProps) {
   }
 
   const createNote = async (folderId?: string) => {
+    setIsCreatingNote(true)
     try {
-      const { data, error } = await supabase
-        .from("notes")
-        .insert({
+      const response = await fetch("/api/notes", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
           title: "Untitled",
           content: "",
           folder_id: folderId || null,
-          user_id: user.id,
-        })
-        .select()
-        .single()
+        }),
+      })
 
-      if (error) throw error
+      if (!response.ok) {
+        throw new Error("Failed to create note")
+      }
 
-      const newNote = data as Note
+      const newNote = await response.json()
       setNotes([newNote, ...notes])
       setSelectedNote(newNote)
+      toast.success("Note created successfully")
     } catch (error) {
       console.error("Error creating note:", error)
+      toast.error("Failed to create note. Please try again.")
+    } finally {
+      setIsCreatingNote(false)
     }
   }
 
   const updateNote = async (noteId: string, updates: Partial<Note>) => {
     try {
-      const { error } = await supabase
-        .from("notes")
-        .update({ ...updates, updated_at: new Date().toISOString() })
-        .eq("id", noteId)
+      const response = await fetch(`/api/notes/${noteId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(updates),
+      })
 
-      if (error) throw error
+      if (!response.ok) {
+        throw new Error("Failed to update note")
+      }
 
-      setNotes(notes.map((note) => (note.id === noteId ? { ...note, ...updates } : note)))
+      const updatedNote = await response.json()
+      setNotes(notes.map((note) => (note.id === noteId ? updatedNote : note)))
 
       if (selectedNote?.id === noteId) {
-        setSelectedNote({ ...selectedNote, ...updates })
+        setSelectedNote(updatedNote)
       }
+      toast.success("Note saved successfully")
     } catch (error) {
       console.error("Error updating note:", error)
+      toast.error("Failed to update note. Please try again.")
     }
   }
 
   const deleteNote = async (noteId: string) => {
+    setIsDeletingNote(noteId)
     try {
-      const { error } = await supabase.from("notes").delete().eq("id", noteId)
+      const response = await fetch(`/api/notes/${noteId}`, {
+        method: "DELETE",
+      })
 
-      if (error) throw error
+      if (!response.ok) {
+        throw new Error("Failed to delete note")
+      }
 
       setNotes(notes.filter((note) => note.id !== noteId))
       if (selectedNote?.id === noteId) {
         setSelectedNote(null)
       }
+      toast.success("Note deleted successfully")
     } catch (error) {
       console.error("Error deleting note:", error)
+      toast.error("Failed to delete note. Please try again.")
+    } finally {
+      setIsDeletingNote(null)
     }
   }
 
   const createFolder = async (name: string, parentId?: string) => {
+    setIsCreatingFolder(true)
     try {
-      const { data, error } = await supabase
-        .from("folders")
-        .insert({
+      const response = await fetch("/api/folders", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
           name,
           parent_id: parentId || null,
-          user_id: user.id,
-        })
-        .select()
-        .single()
+        }),
+      })
 
-      if (error) throw error
+      if (!response.ok) {
+        throw new Error("Failed to create folder")
+      }
 
-      const newFolder = data as Folder
+      const newFolder = await response.json()
       setFolders([...folders, newFolder])
+      toast.success("Folder created successfully")
     } catch (error) {
       console.error("Error creating folder:", error)
+      toast.error("Failed to create folder. Please try again.")
+    } finally {
+      setIsCreatingFolder(false)
     }
   }
 
   const deleteFolder = async (folderId: string) => {
+    setIsDeletingFolder(folderId)
     try {
-      const { error } = await supabase.from("folders").delete().eq("id", folderId)
+      const response = await fetch(`/api/folders/${folderId}`, {
+        method: "DELETE",
+      })
 
-      if (error) throw error
+      if (!response.ok) {
+        throw new Error("Failed to delete folder")
+      }
 
       setFolders(folders.filter((folder) => folder.id !== folderId))
       // Move notes from deleted folder to root
       setNotes(notes.map((note) => (note.folder_id === folderId ? { ...note, folder_id: null } : note)))
+      toast.success("Folder deleted successfully")
     } catch (error) {
       console.error("Error deleting folder:", error)
+      toast.error("Failed to delete folder. Please try again.")
+    } finally {
+      setIsDeletingFolder(null)
     }
   }
 
@@ -172,7 +219,10 @@ export function DashboardLayout({ user }: DashboardLayoutProps) {
   if (isLoading) {
     return (
       <div className="h-screen bg-background flex items-center justify-center">
-        <div className="text-muted-foreground">Loading...</div>
+        <div className="flex flex-col items-center space-y-4">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-foreground"></div>
+          <div className="text-muted-foreground">Loading your notes...</div>
+        </div>
       </div>
     )
   }
@@ -193,7 +243,7 @@ export function DashboardLayout({ user }: DashboardLayoutProps) {
       `}
       >
         <div className="flex items-center justify-between p-4 border-b border-border/50">
-          <h1 className="text-lg font-semibold tracking-tight">Obsidian Web</h1>
+          <h1 className="text-lg font-semibold tracking-tight">Off-Notes</h1>
           <div className="flex items-center gap-2">
             <ThemeToggle />
             <Button
@@ -221,6 +271,10 @@ export function DashboardLayout({ user }: DashboardLayoutProps) {
           onCreateFolder={createFolder}
           onDeleteFolder={deleteFolder}
           onDeleteNote={deleteNote}
+          isCreatingNote={isCreatingNote}
+          isCreatingFolder={isCreatingFolder}
+          isDeletingNote={isDeletingNote}
+          isDeletingFolder={isDeletingFolder}
         />
       </div>
 

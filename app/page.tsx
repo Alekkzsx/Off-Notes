@@ -12,7 +12,7 @@ export default function HomePage() {
               <div className="w-6 h-6 bg-background rounded-sm"></div>
             </div>
             <div>
-              <CardTitle className="text-2xl font-semibold">Obsidian Web</CardTitle>
+              <CardTitle className="text-2xl font-semibold">Off-Notes</CardTitle>
               <CardDescription className="text-muted-foreground">
                 Your personal knowledge management system
               </CardDescription>

@@ -25,8 +25,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Message is required" }, { status: 400 })
     }
 
-    // Create system prompt for note-taking assistant
-    const systemPrompt = `You are an AI writing assistant for a note-taking app similar to Obsidian. Help users with:
+    const systemPrompt = `You are an AI writing assistant for a note-taking app called Off-Notes. Help users with:
 - Writing and improving their notes
 - Summarizing content
 - Organizing thoughts

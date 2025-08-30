@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
-import { Save } from "lucide-react"
+import { Save, Loader2 } from "lucide-react"
 import { FileUpload, AttachmentList } from "./file-upload"
 
 interface Note {
@@ -18,7 +18,7 @@ interface Note {
 
 interface NoteEditorProps {
   note: Note
-  onUpdateNote: (noteId: string, updates: Partial<Note>) => void
+  onUpdateNote: (noteId: string, updates: Partial<Note>) => Promise<void>
 }
 
 interface Attachment {
@@ -34,6 +34,7 @@ export function NoteEditor({ note, onUpdateNote }: NoteEditorProps) {
   const [title, setTitle] = useState(note.title)
   const [content, setContent] = useState(note.content)
   const [hasChanges, setHasChanges] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
   const [attachments, setAttachments] = useState<Attachment[]>([])
   const [loadingAttachments, setLoadingAttachments] = useState(true)
 
@@ -65,10 +66,17 @@ export function NoteEditor({ note, onUpdateNote }: NoteEditorProps) {
     }
   }
 
-  const handleSave = () => {
-    if (hasChanges) {
-      onUpdateNote(note.id, { title, content })
-      setHasChanges(false)
+  const handleSave = async () => {
+    if (hasChanges && !isSaving) {
+      setIsSaving(true)
+      try {
+        await onUpdateNote(note.id, { title, content })
+        setHasChanges(false)
+      } catch (error) {
+        console.error("Failed to save note:", error)
+      } finally {
+        setIsSaving(false)
+      }
     }
   }
 
@@ -82,7 +90,7 @@ export function NoteEditor({ note, onUpdateNote }: NoteEditorProps) {
   useEffect(() => {
     document.addEventListener("keydown", handleKeyDown)
     return () => document.removeEventListener("keydown", handleKeyDown)
-  }, [hasChanges, title, content])
+  }, [hasChanges, title, content, isSaving])
 
   return (
     <div className="h-full flex flex-col">
@@ -93,12 +101,19 @@ export function NoteEditor({ note, onUpdateNote }: NoteEditorProps) {
           onChange={(e) => setTitle(e.target.value)}
           className="text-lg font-semibold border-none shadow-none px-0 focus-visible:ring-0"
           placeholder="Untitled"
+          disabled={isSaving}
         />
         <div className="flex items-center gap-2">
           <FileUpload noteId={note.id} onFileUploaded={loadAttachments} />
-          <Button variant="outline" size="sm" onClick={handleSave} disabled={!hasChanges} className="bg-transparent">
-            <Save className="w-4 h-4 mr-2" />
-            Save
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleSave}
+            disabled={!hasChanges || isSaving}
+            className="bg-transparent"
+          >
+            {isSaving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
+            {isSaving ? "Saving..." : "Save"}
           </Button>
         </div>
       </div>
@@ -110,16 +125,22 @@ export function NoteEditor({ note, onUpdateNote }: NoteEditorProps) {
           onChange={(e) => setContent(e.target.value)}
           placeholder="Start writing..."
           className="h-64 resize-none border-none shadow-none focus-visible:ring-0 text-sm leading-relaxed mb-4"
+          disabled={isSaving}
         />
 
-        {!loadingAttachments && (
+        {loadingAttachments ? (
+          <div className="flex items-center justify-center py-4">
+            <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+            <span className="ml-2 text-sm text-muted-foreground">Loading attachments...</span>
+          </div>
+        ) : (
           <AttachmentList noteId={note.id} attachments={attachments} onAttachmentDeleted={loadAttachments} />
         )}
       </div>
 
       {/* Status */}
       <div className="px-4 py-2 border-t border-border/50 text-xs text-muted-foreground">
-        {hasChanges ? "Unsaved changes" : "All changes saved"} • Last updated:{" "}
+        {isSaving ? "Saving changes..." : hasChanges ? "Unsaved changes" : "All changes saved"} • Last updated:{" "}
         {new Date(note.updated_at).toLocaleString()}
       </div>
     </div>

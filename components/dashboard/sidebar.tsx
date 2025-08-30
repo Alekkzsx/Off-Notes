@@ -4,7 +4,17 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Plus, FolderPlus, FolderIcon, FileText, MoreHorizontal, Trash2, ChevronRight, ChevronDown } from "lucide-react"
+import {
+  Plus,
+  FolderPlus,
+  FolderIcon,
+  FileText,
+  MoreHorizontal,
+  Trash2,
+  ChevronRight,
+  ChevronDown,
+  Loader2,
+} from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 
 interface Note {
@@ -34,6 +44,10 @@ interface SidebarProps {
   onCreateFolder: (name: string, parentId?: string) => void
   onDeleteFolder: (folderId: string) => void
   onDeleteNote: (noteId: string) => void
+  isCreatingNote?: boolean
+  isCreatingFolder?: boolean
+  isDeletingNote?: string | null
+  isDeletingFolder?: string | null
 }
 
 export function Sidebar({
@@ -47,6 +61,10 @@ export function Sidebar({
   onCreateFolder,
   onDeleteFolder,
   onDeleteNote,
+  isCreatingNote = false,
+  isCreatingFolder = false,
+  isDeletingNote = null,
+  isDeletingFolder = null,
 }: SidebarProps) {
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set())
   const [newFolderName, setNewFolderName] = useState("")
@@ -75,13 +93,15 @@ export function Sidebar({
     const isSelected = selectedFolder === folder.id
     const childFolders = folders.filter((f) => f.parent_id === folder.id)
     const folderNotes = notes.filter((note) => note.folder_id === folder.id)
+    const isDeleting = isDeletingFolder === folder.id
 
     return (
       <div key={folder.id}>
         <div
           className={`
-            flex items-center gap-2 px-2 py-1 rounded-md cursor-pointer hover:bg-muted/50
+            flex items-center gap-2 px-2 py-1 rounded-md cursor-pointer hover:bg-muted/50 group
             ${isSelected ? "bg-muted" : ""}
+            ${isDeleting ? "opacity-50" : ""}
           `}
           style={{ paddingLeft: `${8 + level * 16}px` }}
         >
@@ -103,61 +123,73 @@ export function Sidebar({
             {folder.name}
           </span>
 
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="w-4 h-4 p-0 opacity-0 group-hover:opacity-100">
-                <MoreHorizontal className="w-3 h-3" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => onCreateNote(folder.id)}>
-                <Plus className="w-4 h-4 mr-2" />
-                New Note
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onDeleteFolder(folder.id)} className="text-destructive">
-                <Trash2 className="w-4 h-4 mr-2" />
-                Delete Folder
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {isDeleting ? (
+            <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+          ) : (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="w-4 h-4 p-0 opacity-0 group-hover:opacity-100">
+                  <MoreHorizontal className="w-3 h-3" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => onCreateNote(folder.id)} disabled={isCreatingNote}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  New Note
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => onDeleteFolder(folder.id)} className="text-destructive">
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Delete Folder
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
         </div>
 
         {isExpanded && (
           <>
             {childFolders.map((childFolder) => renderFolder(childFolder, level + 1))}
-            {folderNotes.map((note) => (
-              <div
-                key={note.id}
-                className={`
-                  flex items-center gap-2 px-2 py-1 rounded-md cursor-pointer hover:bg-muted/50 group
-                  ${selectedNote?.id === note.id ? "bg-muted" : ""}
-                `}
-                style={{ paddingLeft: `${24 + (level + 1) * 16}px` }}
-                onClick={() => onSelectNote(note)}
-              >
-                <FileText className="w-4 h-4 text-muted-foreground" />
-                <span className="flex-1 text-sm truncate">{note.title}</span>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="sm" className="w-4 h-4 p-0 opacity-0 group-hover:opacity-100">
-                      <MoreHorizontal className="w-3 h-3" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        onDeleteNote(note.id)
-                      }}
-                      className="text-destructive"
-                    >
-                      <Trash2 className="w-4 h-4 mr-2" />
-                      Delete Note
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            ))}
+            {folderNotes.map((note) => {
+              const isNoteDeleting = isDeletingNote === note.id
+              return (
+                <div
+                  key={note.id}
+                  className={`
+                    flex items-center gap-2 px-2 py-1 rounded-md cursor-pointer hover:bg-muted/50 group
+                    ${selectedNote?.id === note.id ? "bg-muted" : ""}
+                    ${isNoteDeleting ? "opacity-50" : ""}
+                  `}
+                  style={{ paddingLeft: `${24 + (level + 1) * 16}px` }}
+                  onClick={() => !isNoteDeleting && onSelectNote(note)}
+                >
+                  <FileText className="w-4 h-4 text-muted-foreground" />
+                  <span className="flex-1 text-sm truncate">{note.title}</span>
+                  {isNoteDeleting ? (
+                    <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+                  ) : (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="sm" className="w-4 h-4 p-0 opacity-0 group-hover:opacity-100">
+                          <MoreHorizontal className="w-3 h-3" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            onDeleteNote(note.id)
+                          }}
+                          className="text-destructive"
+                        >
+                          <Trash2 className="w-4 h-4 mr-2" />
+                          Delete Note
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
+                </div>
+              )
+            })}
           </>
         )}
       </div>
@@ -171,11 +203,23 @@ export function Sidebar({
       {/* Actions */}
       <div className="p-4 border-b border-border/50">
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={() => onCreateNote()} className="flex-1 bg-transparent">
-            <Plus className="w-4 h-4 mr-2" />
-            New Note
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => onCreateNote()}
+            className="flex-1 bg-transparent"
+            disabled={isCreatingNote}
+          >
+            {isCreatingNote ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Plus className="w-4 h-4 mr-2" />}
+            {isCreatingNote ? "Creating..." : "New Note"}
           </Button>
-          <Button variant="outline" size="sm" onClick={() => setShowNewFolderInput(true)} className="bg-transparent">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowNewFolderInput(true)}
+            className="bg-transparent"
+            disabled={isCreatingFolder}
+          >
             <FolderPlus className="w-4 h-4" />
           </Button>
         </div>
@@ -195,9 +239,10 @@ export function Sidebar({
               }}
               className="text-sm"
               autoFocus
+              disabled={isCreatingFolder}
             />
-            <Button size="sm" onClick={handleCreateFolder}>
-              Add
+            <Button size="sm" onClick={handleCreateFolder} disabled={isCreatingFolder || !newFolderName.trim()}>
+              {isCreatingFolder ? <Loader2 className="w-4 h-4 animate-spin" /> : "Add"}
             </Button>
           </div>
         )}
@@ -220,39 +265,47 @@ export function Sidebar({
 
           {/* Root notes */}
           {selectedFolder === null &&
-            rootNotes.map((note) => (
-              <div
-                key={note.id}
-                className={`
-                flex items-center gap-2 px-2 py-1 rounded-md cursor-pointer hover:bg-muted/50 group
-                ${selectedNote?.id === note.id ? "bg-muted" : ""}
-              `}
-                style={{ paddingLeft: "24px" }}
-                onClick={() => onSelectNote(note)}
-              >
-                <FileText className="w-4 h-4 text-muted-foreground" />
-                <span className="flex-1 text-sm truncate">{note.title}</span>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="sm" className="w-4 h-4 p-0 opacity-0 group-hover:opacity-100">
-                      <MoreHorizontal className="w-3 h-3" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        onDeleteNote(note.id)
-                      }}
-                      className="text-destructive"
-                    >
-                      <Trash2 className="w-4 h-4 mr-2" />
-                      Delete Note
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            ))}
+            rootNotes.map((note) => {
+              const isNoteDeleting = isDeletingNote === note.id
+              return (
+                <div
+                  key={note.id}
+                  className={`
+                    flex items-center gap-2 px-2 py-1 rounded-md cursor-pointer hover:bg-muted/50 group
+                    ${selectedNote?.id === note.id ? "bg-muted" : ""}
+                    ${isNoteDeleting ? "opacity-50" : ""}
+                  `}
+                  style={{ paddingLeft: "24px" }}
+                  onClick={() => !isNoteDeleting && onSelectNote(note)}
+                >
+                  <FileText className="w-4 h-4 text-muted-foreground" />
+                  <span className="flex-1 text-sm truncate">{note.title}</span>
+                  {isNoteDeleting ? (
+                    <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+                  ) : (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="sm" className="w-4 h-4 p-0 opacity-0 group-hover:opacity-100">
+                          <MoreHorizontal className="w-3 h-3" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            onDeleteNote(note.id)
+                          }}
+                          className="text-destructive"
+                        >
+                          <Trash2 className="w-4 h-4 mr-2" />
+                          Delete Note
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
+                </div>
+              )
+            })}
 
           {/* Folders */}
           {folders.filter((f) => f.parent_id === null).map((folder) => renderFolder(folder))}

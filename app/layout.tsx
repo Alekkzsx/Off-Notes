@@ -4,12 +4,13 @@ import { GeistSans } from "geist/font/sans"
 import { GeistMono } from "geist/font/mono"
 import { Analytics } from "@vercel/analytics/next"
 import { ThemeProvider } from "@/components/theme-provider"
+import { Toaster } from "@/components/ui/sonner"
 import { Suspense } from "react"
 import "./globals.css"
 
 export const metadata: Metadata = {
-  title: "Obsidian Web Clone",
-  description: "A minimalist note-taking app inspired by Obsidian",
+  title: "Off-Notes",
+  description: "A minimalist note-taking app for organizing your thoughts",
   generator: "v0.app",
 }
 
@@ -24,6 +25,7 @@ export default function RootLayout({
         <Suspense fallback={null}>
           <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
             {children}
+            <Toaster />
           </ThemeProvider>
         </Suspense>
         <Analytics />

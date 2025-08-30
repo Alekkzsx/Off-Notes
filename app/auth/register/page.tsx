@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Loader2 } from "lucide-react"
 
 export default function RegisterPage() {
   const [email, setEmail] = useState("")
@@ -17,26 +18,88 @@ export default function RegisterPage() {
   const [confirmPassword, setConfirmPassword] = useState("")
   const [displayName, setDisplayName] = useState("")
   const [error, setError] = useState<string | null>(null)
+  const [emailError, setEmailError] = useState<string | null>(null)
+  const [passwordError, setPasswordError] = useState<string | null>(null)
+  const [confirmPasswordError, setConfirmPasswordError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
 
+  const validateEmail = (email: string) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!email) {
+      return "Email is required"
+    }
+    if (!emailRegex.test(email)) {
+      return "Please enter a valid email address"
+    }
+    return null
+  }
+
+  const validatePassword = (password: string) => {
+    if (!password) {
+      return "Password is required"
+    }
+    if (password.length < 6) {
+      return "Password must be at least 6 characters"
+    }
+    if (password.length > 72) {
+      return "Password must be less than 72 characters"
+    }
+    return null
+  }
+
+  const validateConfirmPassword = (confirmPassword: string, password: string) => {
+    if (!confirmPassword) {
+      return "Please confirm your password"
+    }
+    if (confirmPassword !== password) {
+      return "Passwords do not match"
+    }
+    return null
+  }
+
+  const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value
+    setEmail(value)
+    setEmailError(validateEmail(value))
+    setError(null)
+  }
+
+  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value
+    setPassword(value)
+    setPasswordError(validatePassword(value))
+    if (confirmPassword) {
+      setConfirmPasswordError(validateConfirmPassword(confirmPassword, value))
+    }
+    setError(null)
+  }
+
+  const handleConfirmPasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value
+    setConfirmPassword(value)
+    setConfirmPasswordError(validateConfirmPassword(value, password))
+    setError(null)
+  }
+
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault()
+
+    const emailValidation = validateEmail(email)
+    const passwordValidation = validatePassword(password)
+    const confirmPasswordValidation = validateConfirmPassword(confirmPassword, password)
+
+    setEmailError(emailValidation)
+    setPasswordError(passwordValidation)
+    setConfirmPasswordError(confirmPasswordValidation)
+
+    if (emailValidation || passwordValidation || confirmPasswordValidation) {
+      return
+    }
+
     const supabase = createClient()
     setIsLoading(true)
     setError(null)
-
-    if (password !== confirmPassword) {
-      setError("Passwords do not match")
-      setIsLoading(false)
-      return
-    }
-
-    if (password.length < 6) {
-      setError("Password must be at least 6 characters")
-      setIsLoading(false)
-      return
-    }
 
     try {
       const { error } = await supabase.auth.signUp({
@@ -58,6 +121,8 @@ export default function RegisterPage() {
     }
   }
 
+  const isFormValid = !emailError && !passwordError && !confirmPasswordError && email && password && confirmPassword
+
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-md">
@@ -77,6 +142,7 @@ export default function RegisterPage() {
                   value={displayName}
                   onChange={(e) => setDisplayName(e.target.value)}
                   className="border-border/50"
+                  disabled={isLoading}
                 />
               </div>
               <div className="space-y-2">
@@ -86,10 +152,11 @@ export default function RegisterPage() {
                   type="email"
                   placeholder="Enter your email"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  className="border-border/50"
+                  onChange={handleEmailChange}
+                  className={`border-border/50 ${emailError ? "border-destructive" : ""}`}
+                  disabled={isLoading}
                 />
+                {emailError && <p className="text-sm text-destructive">{emailError}</p>}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="password">Password</Label>
@@ -98,10 +165,11 @@ export default function RegisterPage() {
                   type="password"
                   placeholder="Create a password"
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  className="border-border/50"
+                  onChange={handlePasswordChange}
+                  className={`border-border/50 ${passwordError ? "border-destructive" : ""}`}
+                  disabled={isLoading}
                 />
+                {passwordError && <p className="text-sm text-destructive">{passwordError}</p>}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="confirmPassword">Confirm Password</Label>
@@ -110,14 +178,22 @@ export default function RegisterPage() {
                   type="password"
                   placeholder="Confirm your password"
                   value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  required
-                  className="border-border/50"
+                  onChange={handleConfirmPasswordChange}
+                  className={`border-border/50 ${confirmPasswordError ? "border-destructive" : ""}`}
+                  disabled={isLoading}
                 />
+                {confirmPasswordError && <p className="text-sm text-destructive">{confirmPasswordError}</p>}
               </div>
               {error && <div className="text-sm text-destructive bg-destructive/10 p-3 rounded-md">{error}</div>}
-              <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? "Creating account..." : "Create Account"}
+              <Button type="submit" className="w-full" disabled={!isFormValid || isLoading}>
+                {isLoading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Creating account...
+                  </>
+                ) : (
+                  "Create Account"
+                )}
               </Button>
             </form>
             <div className="mt-6 text-center text-sm text-muted-foreground">

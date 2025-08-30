@@ -25,7 +25,7 @@ export default function VerifyEmailPage() {
           </CardHeader>
           <CardContent className="text-center">
             <p className="text-sm text-muted-foreground mb-6">
-              Click the link in your email to verify your account and start using Obsidian Web.
+              Click the link in your email to verify your account and start using Off-Notes.
             </p>
             <Button asChild variant="outline" className="w-full bg-transparent">
               <Link href="/auth/login">Back to Sign In</Link>
