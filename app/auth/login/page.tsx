@@ -5,12 +5,12 @@ import type React from "react"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Loader2 } from "lucide-react"
+import { toast } from "sonner"
 
 export default function LoginPage() {
   const [email, setEmail] = useState("")
@@ -69,19 +69,30 @@ export default function LoginPage() {
       return
     }
 
-    const supabase = createClient()
     setIsLoading(true)
     setError(null)
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email, password }),
       })
-      if (error) throw error
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || "Login failed")
+      }
+
+      toast.success("Login successful!")
       router.push("/dashboard")
     } catch (error: unknown) {
-      setError(error instanceof Error ? error.message : "An error occurred")
+      const errorMessage = error instanceof Error ? error.message : "An error occurred"
+      setError(errorMessage)
+      toast.error(errorMessage)
     } finally {
       setIsLoading(false)
     }

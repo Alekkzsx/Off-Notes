@@ -1,15 +1,11 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { createClient } from "@/lib/supabase/server"
+import { sql } from "@/lib/neon/client"
+import { getCurrentUser } from "@/lib/auth"
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createClient()
-
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser()
-    if (authError || !user) {
+    const user = await getCurrentUser()
+    if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
@@ -19,22 +15,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Folder name is required" }, { status: 400 })
     }
 
-    const { data, error } = await supabase
-      .from("folders")
-      .insert({
-        name: name.trim(),
-        parent_id: parent_id || null,
-        user_id: user.id,
-      })
-      .select()
-      .single()
+    const result = await sql`
+      INSERT INTO folders (name, parent_id, user_id)
+      VALUES (${name.trim()}, ${parent_id || null}, ${user.id})
+      RETURNING id, name, parent_id, user_id, created_at, updated_at
+    `
 
-    if (error) {
-      console.error("Database error:", error)
-      return NextResponse.json({ error: "Failed to create folder" }, { status: 500 })
-    }
-
-    return NextResponse.json(data)
+    return NextResponse.json(result[0])
   } catch (error) {
     console.error("API error:", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
@@ -43,23 +30,19 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = createClient()
-
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser()
-    if (authError || !user) {
+    const user = await getCurrentUser()
+    if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const { data, error } = await supabase.from("folders").select("*").eq("user_id", user.id).order("name")
+    const folders = await sql`
+      SELECT id, name, parent_id, user_id, created_at, updated_at
+      FROM folders
+      WHERE user_id = ${user.id}
+      ORDER BY name
+    `
 
-    if (error) {
-      return NextResponse.json({ error: "Failed to fetch folders" }, { status: 500 })
-    }
-
-    return NextResponse.json(data)
+    return NextResponse.json(folders)
   } catch (error) {
     console.error("API error:", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
