@@ -1,19 +1,14 @@
 import { put } from "@vercel/blob"
 import { type NextRequest, NextResponse } from "next/server"
-import { createClient } from "@/lib/supabase/server"
+import { auth } from "@/app/api/auth/[...nextauth]/route"
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createClient()
-
-    // Check if user is authenticated
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser()
-    if (authError || !user) {
+    const session = await auth()
+    if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
+    const user = session.user
 
     const formData = await request.formData()
     const file = formData.get("file") as File
@@ -33,27 +28,9 @@ export async function POST(request: NextRequest) {
       access: "public",
     })
 
-    // Save file reference to database
-    const { data: attachment, error: dbError } = await supabase
-      .from("attachments")
-      .insert({
-        note_id: noteId,
-        filename: file.name,
-        file_url: blob.url,
-        file_size: file.size,
-        file_type: file.type,
-        user_id: user.id,
-      })
-      .select()
-      .single()
-
-    if (dbError) {
-      console.error("Database error:", dbError)
-      return NextResponse.json({ error: "Failed to save file reference" }, { status: 500 })
-    }
+    // TODO: Save file reference to database using Vercel Postgres
 
     return NextResponse.json({
-      id: attachment.id,
       url: blob.url,
       filename: file.name,
       size: file.size,
