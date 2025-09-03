@@ -6,10 +6,7 @@ import { Sidebar } from "./sidebar"
 import { NoteEditor } from "./note-editor"
 import { Button } from "@/components/ui/button"
 import { LogOut, Menu, X } from "lucide-react"
-import { useRouter } from "next/navigation"
-import { AICopilot } from "./ai-copilot"
 import { ThemeToggle } from "@/components/theme-toggle"
-import { toast } from "sonner"
 
 interface Note {
   id: string
