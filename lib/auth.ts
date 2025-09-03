@@ -1,15 +1,48 @@
 import bcrypt from "bcryptjs"
 import jwt from "jsonwebtoken"
-import { sql } from "./neon/client"
+import fs from "fs/promises"
+import path from "path"
 import { cookies } from "next/headers"
 
 const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key-change-in-production"
+
+const DATA_DIR = path.join(process.cwd(), 'data')
+const USERS_FILE = path.join(DATA_DIR, 'users.json')
+
+// Ensure the data directory exists
+async function ensureDataDirectory() {
+  try {
+    await fs.access(DATA_DIR)
+    return
+  } catch {
+    await fs.mkdir(DATA_DIR, { recursive: true })
+  }
+}
+
+async function getUsers(): Promise<User[]> {
+  try {
+    const data = await fs.readFile(USERS_FILE, 'utf8')
+    return JSON.parse(data)
+  } catch (err) {
+    if (err.code === 'ENOENT') {
+      await fs.writeFile(USERS_FILE, JSON.stringify([], null, 2), 'utf8')
+      return []
+    } else {
+      throw err
+    }
+  }
+}
+
+async function saveUsers(users: User[]) {
+  await fs.writeFile(USERS_FILE, JSON.stringify(users, null, 2), 'utf8')
+}
 
 export interface User {
   id: string
   email: string
   name?: string
   email_verified: boolean
+  password_hash?: string
 }
 
 export async function hashPassword(password: string): Promise<string> {
@@ -33,36 +66,36 @@ export function verifyToken(token: string): { userId: string } | null {
 }
 
 export async function createUser(email: string, password: string, name?: string) {
+  await ensureDataDirectory()
   const passwordHash = await hashPassword(password)
-  const verificationToken = Math.random().toString(36).substring(2, 15)
-
-  const result = await sql`
-    INSERT INTO users (email, password_hash, name, verification_token)
-    VALUES (${email}, ${passwordHash}, ${name || null}, ${verificationToken})
-    RETURNING id, email, name, email_verified
-  `
-
-  return result[0]
+  const users = await getUsers()
+  const existingUser = users.find(u => u.email === email)
+  if (existingUser) {
+    throw new Error('Email already registered')
+  }
+  const newUser: User = {
+    id: Date.now().toString(),
+    email,
+    name,
+    email_verified: false,
+    password_hash: passwordHash,
+  }
+  users.push(newUser)
+  await saveUsers(users)
+  return newUser
 }
 
 export async function authenticateUser(email: string, password: string) {
-  const users = await sql`
-    SELECT id, email, name, password_hash, email_verified
-    FROM users
-    WHERE email = ${email}
-  `
-
-  if (users.length === 0) {
+  await ensureDataDirectory()
+  const users = await getUsers()
+  const user = users.find(u => u.email === email)
+  if (!user) {
     return null
   }
-
-  const user = users[0]
-  const isValid = await verifyPassword(password, user.password_hash)
-
+  const isValid = await verifyPassword(password, user.password_hash!)
   if (!isValid) {
     return null
   }
-
   return {
     id: user.id,
     email: user.email,
@@ -75,23 +108,26 @@ export async function getCurrentUser(): Promise<User | null> {
   try {
     const cookieStore = await cookies()
     const token = cookieStore.get("auth-token")?.value
-
     if (!token) {
       return null
     }
-
     const payload = verifyToken(token)
     if (!payload) {
       return null
     }
-
-    const users = await sql`
-      SELECT id, email, name, email_verified
-      FROM users
-      WHERE id = ${payload.userId}
-    `
-
-    return users[0] || null
+    await ensureDataDirectory()
+    const users = await getUsers()
+    const foundUser = users.find(u => u.id === payload.userId)
+    if (foundUser) {
+      return {
+        id: foundUser.id,
+        email: foundUser.email,
+        name: foundUser.name,
+        email_verified: foundUser.email_verified,
+      }
+    } else {
+      return null
+    }
   } catch {
     return null
   }
@@ -100,12 +136,11 @@ export async function getCurrentUser(): Promise<User | null> {
 export async function setAuthCookie(userId: string) {
   const token = generateToken(userId)
   const cookieStore = await cookies()
-
   cookieStore.set("auth-token", token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
-    maxAge: 60 * 60 * 24 * 7, // 7 days
+    maxAge: 60 * 60 * 24 * 7,
   })
 }
 
