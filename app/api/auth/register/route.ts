@@ -1,6 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { createUser, setAuthCookie } from "@/lib/auth"
-import { sql } from "@/lib/neon/client"
 
 export async function POST(request: NextRequest) {
   try {
@@ -8,15 +7,6 @@ export async function POST(request: NextRequest) {
 
     if (!email || !password) {
       return NextResponse.json({ error: "Email and password are required" }, { status: 400 })
-    }
-
-    // Check if user already exists
-    const existingUsers = await sql`
-      SELECT id FROM users WHERE email = ${email}
-    `
-
-    if (existingUsers.length > 0) {
-      return NextResponse.json({ error: "User already exists" }, { status: 400 })
     }
 
     // Create user
