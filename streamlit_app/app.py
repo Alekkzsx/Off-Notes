@@ -12,6 +12,7 @@ def initialize_session():
         st.session_state.user_email = None
         st.session_state.selected_item = None
         st.session_state.selected_item_type = None
+        st.session_state.expanded_folders = []
 
 def main():
     """Main function to run the Streamlit app."""

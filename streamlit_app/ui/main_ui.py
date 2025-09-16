@@ -5,7 +5,7 @@ from db import (
     get_folders_by_user_id, get_notes_by_user_id, get_attachments_by_user_id,
     get_note_by_id, update_note, get_attachment_data, create_folder, create_attachment
 )
-from callbacks import create_note_and_select, select_item, delete_item
+from callbacks import create_note_and_select, select_item, delete_item, toggle_folder
 
 @st.dialog("Create New Folder")
 def create_folder_dialog(user_id, parent_id=None):
@@ -91,18 +91,28 @@ def main_app_content():
 
 def render_tree(items, parent_id=None, level=0):
     """Recursively renders a tree of folders, notes, and attachments."""
-    indent = " " * level * 4
     children = [item for item in items if item['parent_id'] == parent_id]
     
     for item in children:
-        with st.container():
-            col1, col2, col3, col4 = st.columns([0.7, 0.1, 0.1, 0.1])
-            col1.button(f"{indent}{item['icon']} {item['name']}", key=f"select_{item['type']}_{item['id']}", on_click=select_item, args=(item['id'], item['type']))
-            if item['type'] == 'folder':
-                col2.button("➕", key=f"add_note_{item['id']}", on_click=create_note_and_select, args=(st.session_state.user_id, item['id']))
-                if col3.button("📁", key=f"add_folder_{item['id']}"):
-                    create_folder_dialog(st.session_state.user_id, item['id'])
-            col4.button("🗑️", key=f"del_{item['type']}_{item['id']}", on_click=delete_item, args=(item['id'], item['type']))
+        item_id = item['id']
+        item_type = item['type']
+        
+        if item_type == 'folder':
+            is_expanded = item_id in st.session_state.expanded_folders
+            icon = "▼" if is_expanded else "▶"
             
-            if item['type'] == 'folder':
-                render_tree(items, parent_id=item['id'], level=level + 1)
+            cols = st.columns([0.1, 0.6, 0.1, 0.1, 0.1])
+            cols[0].button(icon, key=f"toggle_{item_id}", on_click=toggle_folder, args=(item_id,))
+            cols[1].button(f"{item['icon']} {item['name']}", key=f"select_{item_type}_{item_id}", on_click=select_item, args=(item_id, item_type))
+            cols[2].button("➕", key=f"add_note_{item_id}", on_click=create_note_and_select, args=(st.session_state.user_id, item_id))
+            if cols[3].button("📁", key=f"add_folder_{item_id}"):
+                create_folder_dialog(st.session_state.user_id, item_id)
+            cols[4].button("🗑️", key=f"del_{item_type}_{item_id}", on_click=delete_item, args=(item_id, item_type))
+
+            if is_expanded:
+                render_tree(items, parent_id=item_id, level=level + 1)
+        else:
+            indent = " " * (level + 1) * 2
+            cols = st.columns([0.8, 0.2])
+            cols[0].button(f"{indent}{item['icon']} {item['name']}", key=f"select_{item_type}_{item_id}", on_click=select_item, args=(item_id, item_type))
+            cols[1].button("🗑️", key=f"del_{item_type}_{item_id}", on_click=delete_item, args=(item_id, item_type))

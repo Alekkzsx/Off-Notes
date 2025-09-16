@@ -20,3 +20,10 @@ def delete_item(item_id, item_type):
     if st.session_state.selected_item == item_id:
         st.session_state.selected_item = None
     st.rerun()
+
+def toggle_folder(folder_id):
+    """Expands or collapses a folder."""
+    if folder_id in st.session_state.expanded_folders:
+        st.session_state.expanded_folders.remove(folder_id)
+    else:
+        st.session_state.expanded_folders.append(folder_id)
