@@ -2,72 +2,10 @@ import streamlit as st
 from streamlit_quill import st_quill
 import mimetypes
 from db import (
-    init_db, create_user, get_user_by_email, get_folders_by_user_id,
-    get_notes_by_user_id, update_note, create_folder,
-    create_note, delete_folder, delete_note,
-    create_attachment, get_attachments_by_user_id,
-    get_attachment_data, delete_attachment, get_note_by_id,
-    verify_password
+    get_folders_by_user_id, get_notes_by_user_id, get_attachments_by_user_id,
+    get_note_by_id, update_note, get_attachment_data, create_folder, create_attachment
 )
-
-# --- App Configuration and State Initialization ---
-st.set_page_config(layout="wide")
-
-def initialize_session():
-    """Initializes the session state variables if they don't exist."""
-    if "logged_in" not in st.session_state:
-        st.session_state.logged_in = False
-        st.session_state.page = "register"
-        st.session_state.user_id = None
-        st.session_state.user_email = None
-        st.session_state.selected_item = None
-        st.session_state.selected_item_type = None
-
-# --- Authentication UI ---
-def login_page():
-    """Renders the login page."""
-    st.title("Login")
-    with st.form("login_form"):
-        email = st.text_input("Email")
-        password = st.text_input("Password", type="password")
-        submit_button = st.form_submit_button("Login")
-
-        if submit_button:
-            user = get_user_by_email(email)
-            if user and verify_password(user['password'], password):
-                st.session_state.logged_in = True
-                st.session_state.user_id = user['id']
-                st.session_state.user_email = user['email']
-                st.rerun()
-            else:
-                st.error("Invalid email or password")
-    
-    if st.button("Go to Register"):
-        st.session_state.page = "register"
-        st.rerun()
-
-def register_page():
-    """Renders the registration page."""
-    st.title("Register")
-    with st.form("register_form"):
-        email = st.text_input("Email")
-        password = st.text_input("Password", type="password")
-        submit_button = st.form_submit_button("Register")
-
-        if submit_button:
-            user_id = create_user(email, password)
-            if user_id:
-                st.success("Registration successful! Please login.")
-                st.session_state.page = "login"
-                st.rerun()
-            else:
-                st.error("Email already exists.")
-
-    if st.button("Go to Login"):
-        st.session_state.page = "login"
-        st.rerun()
-
-# --- Main Application UI ---
+from callbacks import create_note_and_select, select_item, delete_item
 
 @st.dialog("Create New Folder")
 def create_folder_dialog(user_id, parent_id=None):
@@ -150,7 +88,6 @@ def main_app_content():
             else:
                 st.download_button(f"Download {attachment['filename']}", attachment['file_data'], attachment['filename'])
 
-# --- UI Helper Functions ---
 def render_tree(items, parent_id=None, level=0):
     """Recursively renders a tree of folders, notes, and attachments."""
     indent = " " * level * 4
@@ -168,42 +105,3 @@ def render_tree(items, parent_id=None, level=0):
             
             if item['type'] == 'folder':
                 render_tree(items, parent_id=item['id'], level=level + 1)
-
-# --- Callback Functions ---
-def select_item(item_id, item_type):
-    """Sets the selected item in the session state."""
-    st.session_state.selected_item = item_id
-    st.session_state.selected_item_type = item_type
-
-def create_note_and_select(user_id, folder_id=None):
-    """Creates a new note and selects it."""
-    new_note_id = create_note(user_id, folder_id)
-    select_item(new_note_id, "note")
-
-def delete_item(item_id, item_type):
-    """Deletes an item (folder, note, or attachment)."""
-    if item_type == 'folder': delete_folder(item_id)
-    elif item_type == 'note': delete_note(item_id)
-    elif item_type == 'attachment': delete_attachment(item_id)
-    
-    if st.session_state.selected_item == item_id:
-        st.session_state.selected_item = None
-    st.rerun()
-
-# --- Main Execution Logic ---
-def main():
-    """Main function to run the Streamlit app."""
-    initialize_session()
-    init_db()
-
-    if st.session_state.logged_in:
-        main_app_sidebar()
-        main_app_content()
-    else:
-        if st.session_state.page == "login":
-            login_page()
-        else:
-            register_page()
-
-if __name__ == "__main__":
-    main()
