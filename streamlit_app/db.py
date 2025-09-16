@@ -89,6 +89,40 @@ def create_user(email, password):
     finally:
         cur.close()
 
+def create_folder(name, user_id):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("INSERT INTO folders (name, user_id) VALUES (?, ?)", (name, user_id))
+    conn.commit()
+    cur.close()
+
+def create_note(user_id, folder_id=None):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("INSERT INTO notes (title, content, user_id, folder_id) VALUES (?, ?, ?, ?)", 
+                ("Untitled", "", user_id, folder_id))
+    new_note_id = cur.lastrowid
+    conn.commit()
+    cur.close()
+    return new_note_id
+
+def delete_note(note_id):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("DELETE FROM notes WHERE id = ?", (note_id,))
+    conn.commit()
+    cur.close()
+
+def delete_folder(folder_id):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    # Delete notes within the folder first
+    cur.execute("DELETE FROM notes WHERE folder_id = ?", (folder_id,))
+    # Then delete the folder
+    cur.execute("DELETE FROM folders WHERE id = ?", (folder_id,))
+    conn.commit()
+    cur.close()
+
 # Initialize the database and tables when the app starts
 conn = get_db_connection()
 # Check if tables are already created to avoid re-creating them on every rerun
