@@ -1,10 +1,18 @@
 import sqlite3
 import streamlit as st
+import bcrypt
 
-# Use a singleton pattern to ensure only one in-memory database connection exists
+# --- Password Hashing ---
+def hash_password(password):
+    return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+
+def verify_password(stored_password, provided_password):
+    return bcrypt.checkpw(provided_password.encode('utf-8'), stored_password.encode('utf-8'))
+
+# Use a singleton pattern to ensure only one database connection exists
 @st.cache_resource
 def get_db_connection():
-    conn = sqlite3.connect(":memory:", check_same_thread=False)
+    conn = sqlite3.connect("notes.db", check_same_thread=False)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON")
     return conn
@@ -41,8 +49,6 @@ def setup_database(conn):
         FOREIGN KEY (user_id) REFERENCES users (id),
         FOREIGN KEY (folder_id) REFERENCES folders (id) ON DELETE CASCADE
     )""")
-    # Insert sample user
-    cur.execute("INSERT INTO users (email, password) VALUES (?, ?)", ("test@example.com", "password"))
     conn.commit()
     cur.close()
 
@@ -59,8 +65,9 @@ def init_db():
 def create_user(email, password):
     conn = get_db_connection()
     cur = conn.cursor()
+    hashed_password = hash_password(password)
     try:
-        cur.execute("INSERT INTO users (email, password) VALUES (?, ?)", (email, password))
+        cur.execute("INSERT INTO users (email, password) VALUES (?, ?)", (email, hashed_password))
         conn.commit()
         return cur.lastrowid
     except sqlite3.IntegrityError:
@@ -125,6 +132,12 @@ def delete_note(note_id):
     cur.execute("DELETE FROM notes WHERE id = ?", (note_id,))
     conn.commit()
     cur.close()
+
+def get_note_by_id(note_id):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM notes WHERE id = ?", (note_id,))
+    return cur.fetchone()
 
 # --- Attachment Functions ---
 def create_attachment(filename, file_data, user_id, folder_id=None):

@@ -6,13 +6,15 @@ from db import (
     get_notes_by_user_id, update_note, create_folder,
     create_note, delete_folder, delete_note,
     create_attachment, get_attachments_by_user_id,
-    get_attachment_data, delete_attachment
+    get_attachment_data, delete_attachment, get_note_by_id,
+    verify_password
 )
 
-# --- App State Initialization ---
+# --- App Configuration and State Initialization ---
 st.set_page_config(layout="wide")
 
 def initialize_session():
+    """Initializes the session state variables if they don't exist."""
     if "logged_in" not in st.session_state:
         st.session_state.logged_in = False
         st.session_state.page = "register"
@@ -23,24 +25,53 @@ def initialize_session():
         st.session_state.creating_folder_in = None
         st.session_state.uploading_to = None
 
-# --- UI Rendering ---
-def render_tree(items, parent_id=None, level=0):
-    indent = " " * level * 4
-    children = [item for item in items if item['parent_id'] == parent_id]
-    
-    for item in children:
-        with st.container():
-            col1, col2, col3, col4 = st.columns([0.7, 0.1, 0.1, 0.1])
-            col1.button(f"{indent}{item['icon']} {item['name']}", key=f"select_{item['type']}_{item['id']}", on_click=lambda i=item: select_item(i['id'], i['type']))
-            if item['type'] == 'folder':
-                col2.button("➕", key=f"add_note_{item['id']}", on_click=lambda i=item: create_note_and_select(st.session_state.user_id, i['id']))
-                col3.button("📁", key=f"add_folder_{item['id']}", on_click=lambda i=item: set_creation_mode('folder', i['id']))
-            col4.button("🗑️", key=f"del_{item['type']}_{item['id']}", on_click=lambda i=item: delete_item(i['id'], i['type']))
-            
-            if item['type'] == 'folder':
-                render_tree(items, parent_id=item['id'], level=level + 1)
+# --- Authentication UI ---
+def login_page():
+    """Renders the login page."""
+    st.title("Login")
+    with st.form("login_form"):
+        email = st.text_input("Email")
+        password = st.text_input("Password", type="password")
+        submit_button = st.form_submit_button("Login")
 
+        if submit_button:
+            user = get_user_by_email(email)
+            if user and verify_password(user['password'], password):
+                st.session_state.logged_in = True
+                st.session_state.user_id = user['id']
+                st.session_state.user_email = user['email']
+                st.rerun()
+            else:
+                st.error("Invalid email or password")
+    
+    if st.button("Go to Register"):
+        st.session_state.page = "register"
+        st.rerun()
+
+def register_page():
+    """Renders the registration page."""
+    st.title("Register")
+    with st.form("register_form"):
+        email = st.text_input("Email")
+        password = st.text_input("Password", type="password")
+        submit_button = st.form_submit_button("Register")
+
+        if submit_button:
+            user_id = create_user(email, password)
+            if user_id:
+                st.success("Registration successful! Please login.")
+                st.session_state.page = "login"
+                st.rerun()
+            else:
+                st.error("Email already exists.")
+
+    if st.button("Go to Login"):
+        st.session_state.page = "login"
+        st.rerun()
+
+# --- Main Application UI ---
 def main_app_sidebar():
+    """Renders the main application sidebar."""
     st.sidebar.title(f"Welcome, {st.session_state.user_email}")
     if st.sidebar.button("Logout"):
         st.session_state.clear()
@@ -56,6 +87,7 @@ def main_app_sidebar():
     
     st.sidebar.markdown("---")
     
+    # Fetch all items for the tree view
     folders = get_folders_by_user_id(user_id)
     notes = get_notes_by_user_id(user_id)
     attachments = get_attachments_by_user_id(user_id)
@@ -67,6 +99,7 @@ def main_app_sidebar():
     render_tree(tree_items)
 
 def main_app_content():
+    """Renders the main content area based on the selected item."""
     st.title("Off-Notes")
     if st.session_state.selected_item is None:
         st.info("Select an item from the sidebar or create something new.")
@@ -76,7 +109,7 @@ def main_app_content():
     item_id = st.session_state.selected_item
 
     if item_type == "note":
-        note = get_note_by_id(item_id) # Assumes get_note_by_id exists
+        note = get_note_by_id(item_id)
         if note:
             title = st.text_input("Title", value=note["title"])
             content = st_quill(value=note["content"], html=True, key="quill")
@@ -96,28 +129,26 @@ def main_app_content():
             else:
                 st.download_button(f"Download {attachment['filename']}", attachment['file_data'], attachment['filename'])
 
-# --- Helper & Callback Functions ---
-def select_item(item_id, item_type):
-    st.session_state.selected_item = item_id
-    st.session_state.selected_item_type = item_type
-
-def create_note_and_select(user_id, folder_id=None):
-    new_note_id = create_note(user_id, folder_id)
-    select_item(new_note_id, "note")
-
-def delete_item(item_id, item_type):
-    if item_type == 'folder': delete_folder(item_id)
-    elif item_type == 'note': delete_note(item_id)
-    elif item_type == 'attachment': delete_attachment(item_id)
-    if st.session_state.selected_item == item_id:
-        st.session_state.selected_item = None
-    st.rerun()
-
-def set_creation_mode(item_type, parent_id):
-    if item_type == 'folder': st.session_state.creating_folder_in = parent_id
-    elif item_type == 'attachment': st.session_state.uploading_to = parent_id
+# --- UI Helper Functions ---
+def render_tree(items, parent_id=None, level=0):
+    """Recursively renders a tree of folders, notes, and attachments."""
+    indent = " " * level * 4
+    children = [item for item in items if item['parent_id'] == parent_id]
+    
+    for item in children:
+        with st.container():
+            col1, col2, col3, col4 = st.columns([0.7, 0.1, 0.1, 0.1])
+            col1.button(f"{indent}{item['icon']} {item['name']}", key=f"select_{item['type']}_{item['id']}", on_click=select_item, args=(item['id'], item['type']))
+            if item['type'] == 'folder':
+                col2.button("➕", key=f"add_note_{item['id']}", on_click=create_note_and_select, args=(st.session_state.user_id, item['id']))
+                col3.button("📁", key=f"add_folder_{item['id']}", on_click=set_creation_mode, args=('folder', item['id']))
+            col4.button("🗑️", key=f"del_{item['type']}_{item['id']}", on_click=delete_item, args=(item['id'], item['type']))
+            
+            if item['type'] == 'folder':
+                render_tree(items, parent_id=item['id'], level=level + 1)
 
 def handle_creation_forms(user_id):
+    """Renders forms for creating new folders or uploading attachments."""
     if st.session_state.creating_folder_in is not None:
         with st.sidebar.form("new_folder_form"):
             name = st.text_input("Folder Name")
@@ -133,28 +164,46 @@ def handle_creation_forms(user_id):
             st.session_state.uploading_to = None
             st.rerun()
 
-def get_note_by_id(note_id):
-    notes = get_notes_by_user_id(st.session_state.user_id)
-    return next((n for n in notes if n["id"] == note_id), None)
+# --- Callback Functions ---
+def select_item(item_id, item_type):
+    """Sets the selected item in the session state."""
+    st.session_state.selected_item = item_id
+    st.session_state.selected_item_type = item_type
 
-# --- Auth Pages ---
-def login_page():
-    # ... (login_page code remains the same)
-    pass
+def create_note_and_select(user_id, folder_id=None):
+    """Creates a new note and selects it."""
+    new_note_id = create_note(user_id, folder_id)
+    select_item(new_note_id, "note")
 
-def register_page():
-    # ... (register_page code remains the same)
-    pass
+def delete_item(item_id, item_type):
+    """Deletes an item (folder, note, or attachment)."""
+    if item_type == 'folder': delete_folder(item_id)
+    elif item_type == 'note': delete_note(item_id)
+    elif item_type == 'attachment': delete_attachment(item_id)
+    
+    if st.session_state.selected_item == item_id:
+        st.session_state.selected_item = None
+    st.rerun()
 
-# --- Main Logic ---
-initialize_session()
-init_db()
+def set_creation_mode(item_type, parent_id):
+    """Sets the creation mode for folders or attachments."""
+    if item_type == 'folder': st.session_state.creating_folder_in = parent_id
+    elif item_type == 'attachment': st.session_state.uploading_to = parent_id
 
-if st.session_state.logged_in:
-    main_app_sidebar()
-    main_app_content()
-else:
-    if st.session_state.page == "login":
-        login_page()
+# --- Main Execution Logic ---
+def main():
+    """Main function to run the Streamlit app."""
+    initialize_session()
+    init_db()
+
+    if st.session_state.logged_in:
+        main_app_sidebar()
+        main_app_content()
     else:
-        register_page()
+        if st.session_state.page == "login":
+            login_page()
+        else:
+            register_page()
+
+if __name__ == "__main__":
+    main()
