@@ -5,7 +5,7 @@ from db import (
     get_folders_by_user_id, get_notes_by_user_id, get_attachments_by_user_id,
     get_note_by_id, update_note, get_attachment_data, create_folder, create_attachment
 )
-from callbacks import create_note_and_select, select_item, delete_item, toggle_folder
+from callbacks import create_note_and_select, select_item, delete_item, toggle_folder, select_and_toggle_folder
 
 @st.dialog("Create New Folder")
 def create_folder_dialog(user_id, parent_id=None):
@@ -47,7 +47,6 @@ def main_app_sidebar():
     
     st.sidebar.markdown("---")
     
-    # Fetch all items for the tree view
     folders = get_folders_by_user_id(user_id)
     notes = get_notes_by_user_id(user_id)
     attachments = get_attachments_by_user_id(user_id)
@@ -93,7 +92,6 @@ def render_tree(items, parent_id=None, level=0):
     """Recursively renders a tree of folders, notes, and attachments with a clean, indented look."""
     children = [item for item in items if item['parent_id'] == parent_id]
     
-    # CSS to make buttons smaller and less intrusive
     st.markdown("""
         <style>
             div[data-testid="stButton"] > button {
@@ -101,6 +99,8 @@ def render_tree(items, parent_id=None, level=0):
                 font-size: 0.8rem;
                 border: none;
                 background: none;
+                text-align: left !important;
+                width: 100%;
             }
         </style>
     """, unsafe_allow_html=True)
@@ -113,32 +113,21 @@ def render_tree(items, parent_id=None, level=0):
             is_expanded = item_id in st.session_state.expanded_folders
             arrow_icon = "▼" if is_expanded else "▶"
             
-            # Adjust column ratios for a compact layout
-            cols = st.columns([0.1 + (level * 0.05), 0.5 - (level * 0.05), 0.1, 0.1, 0.1])
+            cols = st.columns([0.6 + (level * 0.05), 0.1, 0.1, 0.1])
             
-            # Column 1: Toggle arrow with indentation
-            cols[0].button(arrow_icon, key=f"toggle_{item_id}", on_click=toggle_folder, args=(item_id,))
+            cols[0].button(f"{arrow_icon} {item['icon']} {item['name']}", key=f"select_{item_type}_{item_id}", on_click=select_and_toggle_folder, args=(item_id,))
             
-            # Column 2: Item name (as a button for selection)
-            cols[1].button(f"{item['icon']} {item['name']}", key=f"select_{item_type}_{item_id}", on_click=select_item, args=(item_id, item_type))
-            
-            # Columns 3-5: Action buttons
-            cols[2].button("➕", key=f"add_note_{item_id}", on_click=create_note_and_select, args=(st.session_state.user_id, item_id))
-            if cols[3].button("📁", key=f"add_folder_{item_id}"):
+            cols[1].button("➕", key=f"add_note_{item_id}", on_click=create_note_and_select, args=(st.session_state.user_id, item_id))
+            if cols[2].button("📁", key=f"add_folder_{item_id}"):
                 create_folder_dialog(st.session_state.user_id, item_id)
-            cols[4].button("🗑️", key=f"del_{item_type}_{item_id}", on_click=delete_item, args=(item_id, item_type))
+            cols[3].button("🗑️", key=f"del_{item_type}_{item_id}", on_click=delete_item, args=(item_id, item_type))
 
             if is_expanded:
                 render_tree(items, parent_id=item_id, level=level + 1)
-        else: # For notes and attachments
-            # Indent notes and attachments to align with folder content
+        else:
             indent_level = level + 1
-            
-            # Adjust column ratios for a compact layout
             cols = st.columns([0.1 + (indent_level * 0.05), 0.8 - (indent_level * 0.05), 0.1])
             
-            # Column 2: Item name (as a button for selection)
             cols[1].button(f"{item['icon']} {item['name']}", key=f"select_{item_type}_{item_id}", on_click=select_item, args=(item_id, item_type))
             
-            # Column 3: Delete button
             cols[2].button("🗑️", key=f"del_{item_type}_{item_id}", on_click=delete_item, args=(item_id, item_type))

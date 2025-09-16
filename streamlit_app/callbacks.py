@@ -27,3 +27,8 @@ def toggle_folder(folder_id):
         st.session_state.expanded_folders.remove(folder_id)
     else:
         st.session_state.expanded_folders.append(folder_id)
+
+def select_and_toggle_folder(folder_id):
+    """Selects and expands/collapses a folder in one action."""
+    select_item(folder_id, 'folder')
+    toggle_folder(folder_id)
