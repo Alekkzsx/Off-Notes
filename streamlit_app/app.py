@@ -1,165 +1,164 @@
 import streamlit as st
 from streamlit_quill import st_quill
+import mimetypes
 from db import (
     create_user, get_user_by_email, get_folders_by_user_id,
     get_notes_by_user_id, update_note, create_folder,
-    create_note, delete_folder, delete_note
+    create_note, delete_folder, delete_note,
+    create_attachment, get_attachments_by_user_id,
+    get_attachment_data, delete_attachment
 )
 
-# --- Helper functions for callbacks ---
-def select_note(note_id):
-    st.session_state.selected_note = note_id
+# --- State Management ---
+st.set_page_config(layout="wide")
+
+def get_session_state():
+    if "logged_in" not in st.session_state:
+        st.session_state.logged_in = False
+        st.session_state.page = "register"
+        st.session_state.user_id = None
+        st.session_state.user_email = None
+        st.session_state.selected_item = None
+        st.session_state.selected_item_type = None
+        st.session_state.creating_folder_in = None
+        st.session_state.uploading_in = None
+
+get_session_state()
+
+# --- Helper Functions ---
+def select_item(item_id, item_type):
+    st.session_state.selected_item = item_id
+    st.session_state.selected_item_type = item_type
 
 def create_note_and_select(user_id, folder_id=None):
     new_note_id = create_note(user_id, folder_id)
-    st.session_state.selected_note = new_note_id
+    select_item(new_note_id, "note")
 
-def delete_note_and_rerun(note_id):
-    if st.session_state.get("selected_note") == note_id:
-        del st.session_state.selected_note
-    delete_note(note_id)
-
-def delete_folder_and_rerun(folder_id):
-    # This is a simplified check. A more robust app would check all notes.
-    if st.session_state.get("selected_note"):
-         notes_in_folder = get_notes_by_user_id(st.session_state.user_id)
-         for note in notes_in_folder:
-             if note['folder_id'] == folder_id and note['id'] == st.session_state.selected_note:
-                 del st.session_state.selected_note
-                 break
-    delete_folder(folder_id)
-
-# --- UI Pages ---
-def register_page():
-    st.title("Register")
-    with st.form("register_form"):
-        email = st.text_input("Email")
-        password = st.text_input("Password", type="password")
-        submitted = st.form_submit_button("Register")
-        if submitted:
-            if create_user(email, password):
-                st.success("User created successfully! Please log in.")
-                st.session_state["page"] = "login"
-                st.rerun()
-            else:
-                st.error("Email already exists.")
+# --- UI Components ---
+def render_file_tree(folders, notes, attachments, parent_id=None, level=0):
+    indent = " " * level * 4
     
-    if st.button("Go to Login"):
-        st.session_state["page"] = "login"
-        st.rerun()
+    # Render folders at the current level
+    for folder in [f for f in folders if f['parent_id'] == parent_id]:
+        with st.container():
+            col1, col2, col3, col4 = st.columns([0.7, 0.1, 0.1, 0.1])
+            with col1:
+                st.write(f"{indent}📁 {folder['name']}")
+            with col2:
+                if st.button("➕", key=f"add_note_{folder['id']}", help="New Note"):
+                    create_note_and_select(st.session_state.user_id, folder['id'])
+                    st.rerun()
+            with col3:
+                if st.button("📁", key=f"add_folder_{folder['id']}", help="New Subfolder"):
+                    st.session_state.creating_folder_in = folder['id']
+                    st.rerun()
+            with col4:
+                if st.button("🗑️", key=f"del_folder_{folder['id']}", help="Delete Folder"):
+                    delete_folder(folder['id'])
+                    st.rerun()
+            
+            # Recursively render children
+            render_file_tree(folders, notes, attachments, parent_id=folder['id'], level=level + 1)
 
-def login_page():
-    st.title("Login")
-    st.info("Default user: `test@example.com` | Password: `password`")
-    with st.form("login_form"):
-        email = st.text_input("Email")
-        password = st.text_input("Password", type="password")
-        submitted = st.form_submit_button("Login")
-        if submitted:
-            user = get_user_by_email(email)
-            if user and user["password"] == password:
-                st.session_state.logged_in = True
-                st.session_state.user_email = user["email"]
-                st.session_state.user_id = user["id"]
+    # Render notes at the current level
+    for note in [n for n in notes if n['folder_id'] == parent_id]:
+        col1, col2 = st.columns([0.9, 0.1])
+        with col1:
+            st.button(f"{indent}📄 {note['title']}", key=f"note_{note['id']}", on_click=select_item, args=(note['id'], "note"), use_container_width=True)
+        with col2:
+            if st.button("🗑️", key=f"del_note_{note['id']}", help="Delete Note"):
+                delete_note(note['id'])
                 st.rerun()
-            else:
-                st.error("Invalid email or password")
 
-    if st.button("Go to Register"):
-        st.session_state["page"] = "register"
-        st.rerun()
-
-def note_editor():
-    note_id = st.session_state.selected_note
-    notes = get_notes_by_user_id(st.session_state.user_id)
-    note = next((n for n in notes if n["id"] == note_id), None)
-
-    if note:
-        title = st.text_input("Title", value=note["title"])
-        
-        # The Quill editor returns the HTML content
-        content = st_quill(value=note["content"], html=True, key="quill_editor")
-
-        c1, c2 = st.columns(2)
-        if c1.button("Save", use_container_width=True):
-            update_note(note_id, title, content)
-            st.success("Note saved successfully!")
-            st.rerun()
-
-        # For download, we keep it simple as plain text for now
-        note_content_for_download = f"# {title}\n\n{content}"
-        c2.download_button(
-            label="Download",
-            data=note_content_for_download,
-            file_name=f"{title.replace(' ', '_')}.html",
-            mime="text/html",
-            use_container_width=True
-        )
-    else:
-        st.warning("Note not found. It might have been deleted.")
-        del st.session_state.selected_note
+    # Render attachments at the current level
+    for attachment in [a for a in attachments if a['folder_id'] == parent_id]:
+        col1, col2 = st.columns([0.9, 0.1])
+        with col1:
+            st.button(f"{indent}📎 {attachment['filename']}", key=f"att_{attachment['id']}", on_click=select_item, args=(attachment['id'], "attachment"), use_container_width=True)
+        with col2:
+            if st.button("🗑️", key=f"del_att_{attachment['id']}", help="Delete Attachment"):
+                delete_attachment(attachment['id'])
+                st.rerun()
 
 def main_app():
-    st.sidebar.title(f"Welcome, {st.session_state.user_email}")
-    if st.sidebar.button("Logout"):
-        for key in list(st.session_state.keys()):
-            del st.session_state[key]
-        st.rerun()
+    # --- Sidebar ---
+    with st.sidebar:
+        st.title(f"Welcome, {st.session_state.user_email}")
+        if st.button("Logout"):
+            for key in list(st.session_state.keys()):
+                del st.session_state[key]
+            st.rerun()
 
-    user_id = st.session_state.user_id
+        user_id = st.session_state.user_id
+        
+        c1, c2, c3 = st.columns(3)
+        if c1.button("➕ Note", use_container_width=True):
+            create_note_and_select(user_id)
+            st.rerun()
+        if c2.button("📁 Folder", use_container_width=True):
+            st.session_state.creating_folder_in = None # Root folder
+            st.rerun()
+        if c3.button("📎 Upload", use_container_width=True):
+            st.session_state.uploading_in = None # Root folder
+            st.rerun()
 
-    c1, c2 = st.sidebar.columns(2)
-    if c1.button("➕ New Note", use_container_width=True):
-        create_note_and_select(user_id)
-        st.rerun()
-    if c2.button("📁 New Folder", use_container_width=True):
-        st.session_state.creating_folder = not st.session_state.get("creating_folder", False)
-        st.rerun()
-
-    if st.session_state.get("creating_folder"):
-        with st.sidebar.form(key="new_folder_form"):
-            new_folder_name = st.text_input("Folder Name")
-            if st.form_submit_button("Create") and new_folder_name:
-                create_folder(new_folder_name, user_id)
-                st.session_state.creating_folder = False
+        if st.session_state.creating_folder_in is not None:
+            with st.form("new_folder_form"):
+                name = st.text_input("Folder Name")
+                if st.form_submit_button("Create"):
+                    create_folder(name, user_id, st.session_state.creating_folder_in)
+                    st.session_state.creating_folder_in = None
+                    st.rerun()
+        
+        if st.session_state.uploading_in is not None:
+            uploaded_file = st.file_uploader("Choose a file")
+            if uploaded_file:
+                create_attachment(uploaded_file.name, uploaded_file.getvalue(), user_id, st.session_state.uploading_in)
+                st.session_state.uploading_in = None
                 st.rerun()
 
-    st.sidebar.markdown("---")
-    folders = get_folders_by_user_id(user_id)
-    notes = get_notes_by_user_id(user_id)
+        st.markdown("---")
+        folders = get_folders_by_user_id(user_id)
+        notes = get_notes_by_user_id(user_id)
+        attachments = get_attachments_by_user_id(user_id)
+        render_file_tree(folders, notes, attachments)
 
-    for folder in folders:
-        f_col1, f_col2, f_col3 = st.sidebar.columns([0.7, 0.15, 0.15])
-        f_col1.write(f"📁 {folder['name']}")
-        f_col2.button("➕", key=f"add_in_{folder['id']}", on_click=create_note_and_select, args=(user_id, folder['id']), help="New note in folder")
-        f_col3.button("🗑️", key=f"del_f_{folder['id']}", on_click=delete_folder_and_rerun, args=(folder['id'],), help="Delete folder")
-        
-        for note in notes:
-            if note['folder_id'] == folder['id']:
-                n_col1, n_col2 = st.sidebar.columns([0.85, 0.15])
-                with n_col1:
-                    st.button(f"📄 {note['title']}", key=f"note_{note['id']}", on_click=select_note, args=(note['id'],), use_container_width=True)
-                with n_col2:
-                    st.button("🗑️", key=f"del_n_{note['id']}", on_click=delete_note_and_rerun, args=(note['id'],), help="Delete note")
-
-    st.sidebar.markdown("---")
-    for note in notes:
-        if note['folder_id'] is None:
-            r_col1, r_col2 = st.sidebar.columns([0.85, 0.15])
-            r_col1.button(f"📄 {note['title']}", key=f"note_{note['id']}", on_click=select_note, args=(note['id'],), use_container_width=True)
-            r_col2.button("🗑️", key=f"del_rn_{note['id']}", on_click=delete_note_and_rerun, args=(note['id'],), help="Delete note")
-
+    # --- Main Panel ---
     st.title("Off-Notes (Streamlit)")
-    if "selected_note" in st.session_state:
-        note_editor()
+    if st.session_state.selected_item is None:
+        st.info("Welcome! Select an item from the sidebar to view it, or create something new.")
     else:
-        st.info("Welcome! Create a new note or select an existing one from the sidebar to get started.")
+        item_id = st.session_state.selected_item
+        item_type = st.session_state.selected_item_type
 
-# --- Main app logic ---
-if "page" not in st.session_state:
-    st.session_state.page = "register"
+        if item_type == "note":
+            note = next((n for n in notes if n["id"] == item_id), None)
+            if note:
+                title = st.text_input("Title", value=note["title"])
+                content = st_quill(value=note["content"], html=True, key="quill")
+                if st.button("Save"):
+                    update_note(item_id, title, content)
+                    st.success("Saved!")
+                    st.rerun()
+        
+        elif item_type == "attachment":
+            attachment = get_attachment_data(item_id)
+            if attachment:
+                st.header(attachment['filename'])
+                mime_type, _ = mimetypes.guess_type(attachment['filename'])
+                if mime_type:
+                    if "image" in mime_type:
+                        st.image(attachment['file_data'])
+                    elif "pdf" in mime_type:
+                        st.download_button("Download PDF", attachment['file_data'], attachment['filename'])
+                        st.write("PDF preview is not directly supported, please download.")
+                    else:
+                         st.download_button(f"Download {attachment['filename']}", attachment['file_data'], attachment['filename'])
+                else:
+                    st.download_button(f"Download {attachment['filename']}", attachment['file_data'], attachment['filename'])
 
-if "logged_in" not in st.session_state:
+# --- Authentication and Routing ---
+if not st.session_state.logged_in:
     if st.session_state.page == "login":
         login_page()
     else:

@@ -6,6 +6,8 @@ import streamlit as st
 def get_db_connection():
     conn = sqlite3.connect(":memory:", check_same_thread=False)
     conn.row_factory = sqlite3.Row
+    # Enable foreign key support for cascading deletes
+    conn.execute("PRAGMA foreign_keys = ON")
     return conn
 
 def setup_database(conn):
@@ -22,8 +24,10 @@ def setup_database(conn):
     CREATE TABLE folders (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL,
-        user_id INTEGER,
-        FOREIGN KEY (user_id) REFERENCES users (id)
+        user_id INTEGER NOT NULL,
+        parent_id INTEGER, -- For nesting folders
+        FOREIGN KEY (user_id) REFERENCES users (id),
+        FOREIGN KEY (parent_id) REFERENCES folders (id) ON DELETE CASCADE
     );
     """)
     cur.execute("""
@@ -31,52 +35,37 @@ def setup_database(conn):
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         title TEXT NOT NULL,
         content TEXT,
+        user_id INTEGER NOT NULL,
         folder_id INTEGER,
-        user_id INTEGER,
-        FOREIGN KEY (folder_id) REFERENCES folders (id),
-        FOREIGN KEY (user_id) REFERENCES users (id)
+        FOREIGN KEY (user_id) REFERENCES users (id),
+        FOREIGN KEY (folder_id) REFERENCES folders (id) ON DELETE CASCADE
+    );
+    """)
+    cur.execute("""
+    CREATE TABLE attachments (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        filename TEXT NOT NULL,
+        file_data BLOB NOT NULL,
+        user_id INTEGER NOT NULL,
+        folder_id INTEGER,
+        FOREIGN KEY (user_id) REFERENCES users (id),
+        FOREIGN KEY (folder_id) REFERENCES folders (id) ON DELETE CASCADE
     );
     """)
 
     # Insert sample data
     cur.execute("INSERT INTO users (email, password) VALUES (?, ?)", ("test@example.com", "password"))
-    cur.execute("INSERT INTO folders (name, user_id) VALUES (?, ?)", ("My Folder", 1))
-    cur.execute("INSERT INTO notes (title, content, folder_id, user_id) VALUES (?, ?, ?, ?)", 
-                ("Note in a folder", "This is a note inside a folder.", 1, 1))
-    cur.execute("INSERT INTO notes (title, content, user_id) VALUES (?, ?, ?)", 
-                ("Root note", "This is a note at the root level.", 1))
+    cur.execute("INSERT INTO folders (name, user_id, parent_id) VALUES (?, ?, ?)", ("Root Folder", 1, None))
+    cur.execute("INSERT INTO folders (name, user_id, parent_id) VALUES (?, ?, ?)", ("Sub Folder", 1, 1))
+    cur.execute("INSERT INTO notes (title, content, user_id, folder_id) VALUES (?, ?, ?, ?)", 
+                ("Note in Root", "This is a note in the root folder.", 1, 1))
+    cur.execute("INSERT INTO notes (title, content, user_id, folder_id) VALUES (?, ?, ?, ?)", 
+                ("Note in Sub", "This is a note in the sub folder.", 1, 2))
     
     conn.commit()
     cur.close()
 
-def get_user_by_email(email):
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute("SELECT * FROM users WHERE email = ?", (email,))
-    user = cur.fetchone()
-    return user
-
-def get_folders_by_user_id(user_id):
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute("SELECT * FROM folders WHERE user_id = ?", (user_id,))
-    folders = cur.fetchall()
-    return folders
-
-def get_notes_by_user_id(user_id):
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute("SELECT * FROM notes WHERE user_id = ?", (user_id,))
-    notes = cur.fetchall()
-    return notes
-
-def update_note(note_id, title, content):
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute("UPDATE notes SET title = ?, content = ? WHERE id = ?", (title, content, note_id))
-    conn.commit()
-    cur.close()
-
+# --- User Functions ---
 def create_user(email, password):
     conn = get_db_connection()
     cur = conn.cursor()
@@ -85,26 +74,60 @@ def create_user(email, password):
         conn.commit()
         return cur.lastrowid
     except sqlite3.IntegrityError:
-        return None # User already exists
+        return None
     finally:
         cur.close()
 
-def create_folder(name, user_id):
+def get_user_by_email(email):
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute("INSERT INTO folders (name, user_id) VALUES (?, ?)", (name, user_id))
+    cur.execute("SELECT * FROM users WHERE email = ?", (email,))
+    return cur.fetchone()
+
+# --- Folder Functions ---
+def create_folder(name, user_id, parent_id=None):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("INSERT INTO folders (name, user_id, parent_id) VALUES (?, ?, ?)", (name, user_id, parent_id))
     conn.commit()
     cur.close()
 
-def create_note(user_id, folder_id=None):
+def get_folders_by_user_id(user_id):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM folders WHERE user_id = ?", (user_id,))
+    return cur.fetchall()
+
+def delete_folder(folder_id):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("DELETE FROM folders WHERE id = ?", (folder_id,))
+    conn.commit()
+    cur.close()
+
+# --- Note Functions ---
+def create_note(user_id, folder_id=None, title="Untitled"):
     conn = get_db_connection()
     cur = conn.cursor()
     cur.execute("INSERT INTO notes (title, content, user_id, folder_id) VALUES (?, ?, ?, ?)", 
-                ("Untitled", "", user_id, folder_id))
+                (title, "", user_id, folder_id))
     new_note_id = cur.lastrowid
     conn.commit()
     cur.close()
     return new_note_id
+
+def get_notes_by_user_id(user_id):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM notes WHERE user_id = ?", (user_id,))
+    return cur.fetchall()
+
+def update_note(note_id, title, content):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("UPDATE notes SET title = ?, content = ? WHERE id = ?", (title, content, note_id))
+    conn.commit()
+    cur.close()
 
 def delete_note(note_id):
     conn = get_db_connection()
@@ -113,19 +136,37 @@ def delete_note(note_id):
     conn.commit()
     cur.close()
 
-def delete_folder(folder_id):
+# --- Attachment Functions ---
+def create_attachment(filename, file_data, user_id, folder_id=None):
     conn = get_db_connection()
     cur = conn.cursor()
-    # Delete notes within the folder first
-    cur.execute("DELETE FROM notes WHERE folder_id = ?", (folder_id,))
-    # Then delete the folder
-    cur.execute("DELETE FROM folders WHERE id = ?", (folder_id,))
+    cur.execute("INSERT INTO attachments (filename, file_data, user_id, folder_id) VALUES (?, ?, ?, ?)",
+                (filename, file_data, user_id, folder_id))
     conn.commit()
     cur.close()
 
-# Initialize the database and tables when the app starts
+def get_attachments_by_user_id(user_id):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT id, filename, folder_id FROM attachments WHERE user_id = ?", (user_id,))
+    return cur.fetchall()
+
+def get_attachment_data(attachment_id):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT filename, file_data FROM attachments WHERE id = ?", (attachment_id,))
+    return cur.fetchone()
+
+def delete_attachment(attachment_id):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("DELETE FROM attachments WHERE id = ?", (attachment_id,))
+    conn.commit()
+    cur.close()
+
+
+# --- DB Initialization ---
 conn = get_db_connection()
-# Check if tables are already created to avoid re-creating them on every rerun
 cur = conn.cursor()
 cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='users'")
 if cur.fetchone() is None:
