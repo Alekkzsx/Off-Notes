@@ -31,7 +31,8 @@ def upload_attachment_dialog(user_id, parent_id=None):
 
 def main_app_sidebar():
     """Renders the main application sidebar."""
-    st.sidebar.title(f"Welcome, {st.session_state.user_email}")
+    st.sidebar.title("Off-Notes")
+    st.sidebar.markdown(f"Welcome, {st.session_state.user_email}")
     if st.sidebar.button("Logout"):
         st.session_state.clear()
         st.rerun()
@@ -55,11 +56,11 @@ def main_app_sidebar():
     tree_items += [{'id': n['id'], 'name': n['title'], 'parent_id': n['folder_id'], 'type': 'note', 'icon': '📄'} for n in notes]
     tree_items += [{'id': a['id'], 'name': a['filename'], 'parent_id': a['folder_id'], 'type': 'attachment', 'icon': '📎'} for a in attachments]
     
-    render_tree(tree_items)
+    with st.sidebar:
+        render_tree(tree_items)
 
 def main_app_content():
     """Renders the main content area based on the selected item."""
-    st.title("Off-Notes")
     if st.session_state.selected_item is None:
         st.info("Select an item from the sidebar or create something new.")
         return
