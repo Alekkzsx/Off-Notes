@@ -1,4 +1,5 @@
 import streamlit as st
+from streamlit_quill import st_quill
 from db import (
     create_user, get_user_by_email, get_folders_by_user_id,
     get_notes_by_user_id, update_note, create_folder,
@@ -75,7 +76,9 @@ def note_editor():
 
     if note:
         title = st.text_input("Title", value=note["title"])
-        content = st.text_area("Content", value=note["content"], height=400)
+        
+        # The Quill editor returns the HTML content
+        content = st_quill(value=note["content"], html=True, key="quill_editor")
 
         c1, c2 = st.columns(2)
         if c1.button("Save", use_container_width=True):
@@ -83,12 +86,13 @@ def note_editor():
             st.success("Note saved successfully!")
             st.rerun()
 
+        # For download, we keep it simple as plain text for now
         note_content_for_download = f"# {title}\n\n{content}"
         c2.download_button(
             label="Download",
             data=note_content_for_download,
-            file_name=f"{title.replace(' ', '_')}.txt",
-            mime="text/plain",
+            file_name=f"{title.replace(' ', '_')}.html",
+            mime="text/html",
             use_container_width=True
         )
     else:
