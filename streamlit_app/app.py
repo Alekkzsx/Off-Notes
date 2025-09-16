@@ -1,5 +1,21 @@
 import streamlit as st
-from db import get_user_by_email, get_folders_by_user_id, get_notes_by_user_id, update_note
+from db import create_user, get_user_by_email, get_folders_by_user_id, get_notes_by_user_id, update_note
+
+def register_page():
+    st.title("Register")
+    email = st.text_input("Email")
+    password = st.text_input("Password", type="password")
+    if st.button("Register"):
+        if create_user(email, password):
+            st.success("User created successfully! Please log in.")
+            st.session_state["page"] = "login"
+            st.rerun()
+        else:
+            st.error("Email already exists.")
+    
+    if st.button("Go to Login"):
+        st.session_state["page"] = "login"
+        st.rerun()
 
 def login_page():
     st.title("Login")
@@ -15,6 +31,10 @@ def login_page():
             st.rerun()
         else:
             st.error("Invalid email or password")
+
+    if st.button("Go to Register"):
+        st.session_state["page"] = "register"
+        st.rerun()
 
 def note_editor():
     note_id = st.session_state["selected_note"]
@@ -72,7 +92,13 @@ def main_app():
         note_editor()
 
 # Main app logic
+if "page" not in st.session_state:
+    st.session_state["page"] = "register"
+
 if "logged_in" not in st.session_state:
-    login_page()
+    if st.session_state["page"] == "login":
+        login_page()
+    else:
+        register_page()
 else:
     main_app()

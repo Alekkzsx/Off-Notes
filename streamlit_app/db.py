@@ -77,6 +77,18 @@ def update_note(note_id, title, content):
     conn.commit()
     cur.close()
 
+def create_user(email, password):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    try:
+        cur.execute("INSERT INTO users (email, password) VALUES (?, ?)", (email, password))
+        conn.commit()
+        return cur.lastrowid
+    except sqlite3.IntegrityError:
+        return None # User already exists
+    finally:
+        cur.close()
+
 # Initialize the database and tables when the app starts
 conn = get_db_connection()
 # Check if tables are already created to avoid re-creating them on every rerun
