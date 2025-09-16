@@ -90,29 +90,59 @@ def main_app_content():
                 st.download_button(f"Download {attachment['filename']}", attachment['file_data'], attachment['filename'])
 
 def render_tree(items, parent_id=None, level=0):
-    """Recursively renders a tree of folders, notes, and attachments."""
+    """Recursively renders a tree of folders, notes, and attachments with a clean, indented look."""
     children = [item for item in items if item['parent_id'] == parent_id]
     
+    # CSS to make buttons smaller and less intrusive
+    st.markdown("""
+        <style>
+            div[data-testid="stButton"] > button {
+                padding: 0.1rem 0.3rem;
+                font-size: 0.8rem;
+                border: none;
+                background: none;
+            }
+        </style>
+    """, unsafe_allow_html=True)
+
     for item in children:
         item_id = item['id']
         item_type = item['type']
-        
+        indent = "&nbsp;&nbsp;&nbsp;&nbsp;" * level
+
         if item_type == 'folder':
             is_expanded = item_id in st.session_state.expanded_folders
-            icon = "▼" if is_expanded else "▶"
+            arrow_icon = "▼" if is_expanded else "▶"
             
-            cols = st.columns([0.1, 0.6, 0.1, 0.1, 0.1])
-            cols[0].button(icon, key=f"toggle_{item_id}", on_click=toggle_folder, args=(item_id,))
-            cols[1].button(f"{item['icon']} {item['name']}", key=f"select_{item_type}_{item_id}", on_click=select_item, args=(item_id, item_type))
-            cols[2].button("➕", key=f"add_note_{item_id}", on_click=create_note_and_select, args=(st.session_state.user_id, item_id))
-            if cols[3].button("📁", key=f"add_folder_{item_id}"):
-                create_folder_dialog(st.session_state.user_id, item_id)
-            cols[4].button("🗑️", key=f"del_{item_type}_{item_id}", on_click=delete_item, args=(item_id, item_type))
+            cols = st.columns([0.8, 0.2])
+            with cols[0]:
+                st.markdown(f"""
+                    <div style="display: flex; align-items: center; cursor: pointer;" onclick="st.button('{f"toggle_{item_id}"}')">
+                        {indent}{arrow_icon}&nbsp;{item['icon']}&nbsp;{item['name']}
+                    </div>
+                """, unsafe_allow_html=True)
+                if st.button("", key=f"toggle_{item_id}", on_click=toggle_folder, args=(item_id,)):
+                    pass # Dummy button for callback
+            
+            with cols[1]:
+                action_cols = st.columns(3)
+                action_cols[0].button("➕", key=f"add_note_{item_id}", on_click=create_note_and_select, args=(st.session_state.user_id, item_id))
+                if action_cols[1].button("📁", key=f"add_folder_{item_id}"):
+                    create_folder_dialog(st.session_state.user_id, item_id)
+                action_cols[2].button("🗑️", key=f"del_{item_type}_{item_id}", on_click=delete_item, args=(item_id, item_type))
 
             if is_expanded:
                 render_tree(items, parent_id=item_id, level=level + 1)
-        else:
-            indent = " " * (level + 1) * 2
+        else: # For notes and attachments
             cols = st.columns([0.8, 0.2])
-            cols[0].button(f"{indent}{item['icon']} {item['name']}", key=f"select_{item_type}_{item_id}", on_click=select_item, args=(item_id, item_type))
-            cols[1].button("🗑️", key=f"del_{item_type}_{item_id}", on_click=delete_item, args=(item_id, item_type))
+            with cols[0]:
+                 st.markdown(f"""
+                    <div style="display: flex; align-items: center; cursor: pointer;" onclick="st.button('{f"select_{item_type}_{item_id}"}')">
+                        {indent}&nbsp;&nbsp;&nbsp;{item['icon']}&nbsp;{item['name']}
+                    </div>
+                """, unsafe_allow_html=True)
+                 if st.button("", key=f"select_{item_type}_{item_id}", on_click=select_item, args=(item_id, item_type)):
+                    pass # Dummy button for callback
+            with cols[1]:
+                if st.button("🗑️", key=f"del_{item_type}_{item_id}", on_click=delete_item, args=(item_id, item_type)):
+                    pass
