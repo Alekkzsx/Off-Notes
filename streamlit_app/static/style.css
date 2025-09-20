@@ -1,0 +1,43 @@
+body {
+    background-color: #f0f2f6;
+}
+
+/* Center the form */
+div[data-testid="stForm"] {
+    margin: 0 auto;
+    max-width: 450px;
+    padding: 2rem;
+    background-color: white;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+/* Style the title */
+h1 {
+    text-align: center;
+    color: #1e1e1e;
+}
+
+/* Style buttons */
+div[data-testid="stButton"] > button {
+    width: 100%;
+    border-radius: 5px;
+    background-color: #0068c9;
+    color: white;
+    border: none;
+    padding: 10px 0;
+}
+
+div[data-testid="stButton"] > button:hover {
+    background-color: #0056b3;
+}
+
+/* Specific style for the secondary button (Go to Register/Login) */
+div[data-testid="stButton"] > button[kind="secondary"] {
+    background-color: #e7e7e7;
+    color: #1e1e1e;
+}
+
+div[data-testid="stButton"] > button[kind="secondary"]:hover {
+    background-color: #dcdcdc;
+}
