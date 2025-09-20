@@ -40,6 +40,7 @@ div[data-testid="stTextInput"] label {
     color: #f0f0f0; /* Make label text visible */
     font-weight: bold;
     padding-top: 10px;
+    font-size: 1.1rem; /* Increase font size */
 }
 
 div[data-testid="stTextInput"] > div > div > input {
@@ -47,6 +48,7 @@ div[data-testid="stTextInput"] > div > div > input {
     color: #f0f0f0;
     border: 1px solid #4a4a4a;
     border-radius: 8px; /* More rounded corners */
+    font-size: 1.1rem; /* Increase font size */
 }
 
 /* Style the main submit button */
@@ -57,7 +59,8 @@ div[data-testid="stFormSubmitButton"] > button {
     color: #2e2e2e;
     font-weight: bold;
     border: none;
-    padding: 8px 24px; /* Adjust padding */
+    padding: 10px 28px; /* Adjust padding */
+    font-size: 1.1rem; /* Increase font size */
 }
 
 div[data-testid="stFormSubmitButton"] > button:hover {
@@ -66,15 +69,16 @@ div[data-testid="stFormSubmitButton"] > button:hover {
 
 /* Style the secondary button (Go to Register/Login) */
 div[data-testid="stButton"] > button[kind="secondary"] {
+    position: fixed;
+    bottom: 30px;
+    left: 30px;
     background: none !important;
     border: none !important;
     color: #b0b0b0 !important;
     text-decoration: underline !important;
     width: auto !important;
     padding: 0 !important;
-    margin: 20px auto 0 auto;
-    display: block;
-    text-align: center;
+    font-size: 1.1rem; /* Increase font size */
 }
 
 div[data-testid="stButton"] > button[kind="secondary"]:hover {
