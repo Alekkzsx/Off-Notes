@@ -70,6 +70,9 @@ div[data-testid="stFormSubmitButton"] > button:hover {
 /* Style the secondary button (Go to Register/Login) */
 div[data-testid="stButton"] > button[kind="secondary"] {
     width: 100%; /* Occupy full column width */
+    max-width: 400px; /* Match form width */
+    margin: 10px auto 0 auto; /* Center it below the form */
+    display: block;
     border-radius: 8px;
     background: none !important;
     border: 1px solid #b0b0b0 !important; /* Add border to make it look like a button */
