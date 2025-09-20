@@ -35,23 +35,29 @@ h1 {
     display: none;
 }
 
-/* Style input fields */
+/* Style input fields and their labels */
+div[data-testid="stTextInput"] label {
+    color: #f0f0f0; /* Make label text visible */
+    font-weight: bold;
+    padding-top: 10px;
+}
+
 div[data-testid="stTextInput"] > div > div > input {
     background-color: #2e2e2e;
     color: #f0f0f0;
     border: 1px solid #4a4a4a;
-    border-radius: 4px;
+    border-radius: 8px; /* More rounded corners */
 }
 
 /* Style the main submit button */
 div[data-testid="stFormSubmitButton"] > button {
-    width: 100%;
-    border-radius: 4px;
+    width: auto; /* Make button fit content */
+    border-radius: 8px; /* Rounded corners */
     background-color: #b0b0b0; /* Light grey for the button */
     color: #2e2e2e;
     font-weight: bold;
     border: none;
-    padding: 10px 0;
+    padding: 8px 24px; /* Adjust padding */
 }
 
 div[data-testid="stFormSubmitButton"] > button:hover {
@@ -60,15 +66,25 @@ div[data-testid="stFormSubmitButton"] > button:hover {
 
 /* Style the secondary button (Go to Register/Login) */
 div[data-testid="stButton"] > button[kind="secondary"] {
-    background: none;
-    border: none;
-    color: #b0b0b0;
-    text-decoration: underline;
-    width: auto;
-    padding: 0;
-    float: right; /* Position it like a link */
+    background: none !important;
+    border: none !important;
+    color: #b0b0b0 !important;
+    text-decoration: underline !important;
+    width: auto !important;
+    padding: 0 !important;
+    margin: 20px auto 0 auto;
+    display: block;
+    text-align: center;
 }
 
 div[data-testid="stButton"] > button[kind="secondary"]:hover {
-    color: #ffffff;
+    color: #ffffff !important;
+    text-decoration: underline !important;
+}
+
+/* Style for st.error message */
+div[data-testid="stAlert"] {
+    background-color: #5c3e3e; /* Dark red background */
+    border: 1px solid #8b5a5a;
+    border-radius: 8px; /* Rounded corners */
 }
