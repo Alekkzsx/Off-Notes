@@ -1,43 +1,74 @@
+/* Dark Theme for Auth Pages */
 body {
-    background-color: #f0f2f6;
+    background-color: #2e2e2e; /* Dark grey background */
 }
 
-/* Center the form */
+/* User Icon Placeholder */
+.user-icon {
+    width: 80px;
+    height: 80px;
+    background-color: #4a4a4a;
+    border-radius: 50%;
+    margin: -60px auto 20px auto; /* Pulls the icon up */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 40px;
+    color: #2e2e2e;
+    border: 4px solid #2e2e2e;
+}
+
+/* Center and style the form container */
 div[data-testid="stForm"] {
     margin: 0 auto;
-    max-width: 450px;
+    max-width: 400px;
     padding: 2rem;
-    background-color: white;
-    border-radius: 10px;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    background-color: #3c3c3c; /* Slightly lighter grey for the form */
+    border-radius: 8px;
+    box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+    border: 1px solid #4a4a4a;
+    margin-top: 60px; /* Push the form down to make space for the icon */
 }
 
-/* Style the title */
+/* Remove title as it will be replaced by the icon */
 h1 {
-    text-align: center;
-    color: #1e1e1e;
+    display: none;
 }
 
-/* Style buttons */
-div[data-testid="stButton"] > button {
+/* Style input fields */
+div[data-testid="stTextInput"] > div > div > input {
+    background-color: #2e2e2e;
+    color: #f0f0f0;
+    border: 1px solid #4a4a4a;
+    border-radius: 4px;
+}
+
+/* Style the main submit button */
+div[data-testid="stFormSubmitButton"] > button {
     width: 100%;
-    border-radius: 5px;
-    background-color: #0068c9;
-    color: white;
+    border-radius: 4px;
+    background-color: #b0b0b0; /* Light grey for the button */
+    color: #2e2e2e;
+    font-weight: bold;
     border: none;
     padding: 10px 0;
 }
 
-div[data-testid="stButton"] > button:hover {
-    background-color: #0056b3;
+div[data-testid="stFormSubmitButton"] > button:hover {
+    background-color: #c0c0c0;
 }
 
-/* Specific style for the secondary button (Go to Register/Login) */
+/* Style the secondary button (Go to Register/Login) */
 div[data-testid="stButton"] > button[kind="secondary"] {
-    background-color: #e7e7e7;
-    color: #1e1e1e;
+    background: none;
+    border: none;
+    color: #b0b0b0;
+    text-decoration: underline;
+    width: auto;
+    padding: 0;
+    float: right; /* Position it like a link */
 }
 
 div[data-testid="stButton"] > button[kind="secondary"]:hover {
-    background-color: #dcdcdc;
+    color: #ffffff;
 }

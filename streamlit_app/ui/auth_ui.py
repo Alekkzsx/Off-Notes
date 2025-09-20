@@ -4,9 +4,10 @@ from db import get_user_by_email, create_user, verify_password
 def login_page():
     """Renders the login page."""
     with st.container():
-        st.markdown("<h1>Login</h1>", unsafe_allow_html=True)
+        st.markdown("<h1>Login</h1>", unsafe_allow_html=True) # Hidden by CSS, but good for structure
         with st.form("login_form"):
-            email = st.text_input("Email", placeholder="email@example.com")
+            st.markdown('<div class="user-icon">👤</div>', unsafe_allow_html=True)
+            email = st.text_input("Email", placeholder="Username")
             password = st.text_input("Password", type="password")
             submit_button = st.form_submit_button("Login")
 
@@ -27,9 +28,10 @@ def login_page():
 def register_page():
     """Renders the registration page."""
     with st.container():
-        st.markdown("<h1>Register</h1>", unsafe_allow_html=True)
+        st.markdown("<h1>Register</h1>", unsafe_allow_html=True) # Hidden by CSS, but good for structure
         with st.form("register_form"):
-            email = st.text_input("Email", placeholder="email@example.com")
+            st.markdown('<div class="user-icon">👤</div>', unsafe_allow_html=True)
+            email = st.text_input("Email", placeholder="Username")
             password = st.text_input("Password", type="password")
             submit_button = st.form_submit_button("Register")
 
