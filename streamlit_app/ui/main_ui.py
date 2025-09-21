@@ -32,26 +32,32 @@ def upload_attachment_dialog(user_id, parent_id=None):
 def main_app_sidebar():
     """Renders the main application sidebar with an Obsidian-like feel."""
     with st.sidebar:
-        # Icon bar simulation
         st.markdown("""
-            <div style="display: flex; flex-direction: column; align-items: center; padding: 8px 0;">
+            <div style="
+                position: absolute;
+                top: 0;
+                left: 0;
+                height: 100%;
+                width: 50px;
+                background-color: #202326;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                padding-top: 1rem;
+                gap: 1rem;
+                border-right: 1px solid #4a4a4a;
+            ">
                 <div class="sidebar-icon" title="Notes">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
                 </div>
                 <div class="sidebar-icon" title="Files">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
                 </div>
-                <div class="sidebar-icon" title="Bookmarks">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"></path></svg>
-                </div>
-                <div class="sidebar-icon" title="Favorites">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
-                </div>
             </div>
         """, unsafe_allow_html=True)
 
-        st.markdown("---")
-
+        st.markdown(f'<div style="margin-left: 60px;">', unsafe_allow_html=True)
+        
         user_id = st.session_state.user_id
         c1, c2, c3 = st.columns(3)
         with c1:
@@ -64,29 +70,30 @@ def main_app_sidebar():
             if st.button("📎 Upload", use_container_width=True):
                 upload_attachment_dialog(user_id, None)
         
+        st.markdown("---")
         st.markdown("#### Your Files")
     
-    user_id = st.session_state.user_id
-    folders = get_folders_by_user_id(user_id)
-    notes = get_notes_by_user_id(user_id)
-    attachments = get_attachments_by_user_id(user_id)
-    
-    tree_items = [{'id': f['id'], 'name': f['name'], 'parent_id': f['parent_id'], 'type': 'folder', 'icon': '📁'} for f in folders]
-    tree_items += [{'id': n['id'], 'name': n['title'], 'parent_id': n['folder_id'], 'type': 'note', 'icon': '📄'} for n in notes]
-    tree_items += [{'id': a['id'], 'name': a['filename'], 'parent_id': a['folder_id'], 'type': 'attachment', 'icon': '📎'} for a in attachments]
-    
-    render_tree(tree_items)
+        folders = get_folders_by_user_id(user_id)
+        notes = get_notes_by_user_id(user_id)
+        attachments = get_attachments_by_user_id(user_id)
+        
+        tree_items = [{'id': f['id'], 'name': f['name'], 'parent_id': f['parent_id'], 'type': 'folder', 'icon': '📁'} for f in folders]
+        tree_items += [{'id': n['id'], 'name': n['title'], 'parent_id': n['folder_id'], 'type': 'note', 'icon': '📄'} for n in notes]
+        tree_items += [{'id': a['id'], 'name': a['filename'], 'parent_id': a['folder_id'], 'type': 'attachment', 'icon': '📎'} for a in attachments]
+        
+        render_tree(tree_items)
 
-    # Logout button at the bottom
-    st.markdown("---")
-    if st.button("Logout"):
-        st.session_state.clear()
-        st.rerun()
+        st.markdown("---")
+        if st.button("Logout"):
+            st.session_state.clear()
+            st.rerun()
+            
+        st.markdown('</div>', unsafe_allow_html=True)
 
 def main_app_content():
     """Renders the main content area based on the selected item."""
     if st.session_state.selected_item is None:
-        st.info("Select an item from the sidebar or create something new.")
+        render_home_page()
         return
 
     item_type = st.session_state.selected_item_type
@@ -113,6 +120,35 @@ def main_app_content():
             else:
                 st.download_button(f"Download {attachment['filename']}", attachment['file_data'], attachment['filename'])
 
+def render_home_page():
+    """Renders the default home page content."""
+    st.markdown("""
+        <div class="main-content-container">
+            <h1>Home</h1>
+            
+            <h2>Vault Info</h2>
+            <h3>Recent file updates</h3>
+            <div class="code-block">
+                <pre><code><span class="syntax-cyan">list</span> <span class="syntax-purple">from</span> <span class="syntax-green">""</span>
+<span class="syntax-cyan">sort</span> <span class="syntax-red">file.mtime</span>, <span class="syntax-green">"desc"</span>
+<span class="syntax-cyan">limit</span>(4)</code></pre>
+            </div>
+            
+            <h3>Recent Ideas</h3>
+            <div class="code-block">
+                <pre><code><span class="syntax-cyan">list</span> <span class="syntax-purple">from</span> <span class="syntax-green">"Inbox"</span>
+<span class="syntax-cyan">sort</span>(<span class="syntax-red">f</span> => <span class="syntax-red">f</span>.<span class="syntax-blue">file.mtime</span>, <span class="syntax-green">'desc'</span>).<span class="syntax-cyan">limit</span>(4).<span class="syntax-red">file.link</span></code></pre>
+            </div>
+
+            <h2>Book Notes</h2>
+            <h3>Notes to Process</h3>
+            <div class="code-block">
+                <pre><code><span class="syntax-cyan">list</span> <span class="syntax-purple">from</span> <span class="syntax-green">#unprocessed</span>
+<span class="syntax-cyan">sort</span>(<span class="syntax-red">f</span> => <span class="syntax-red">f</span>.<span class="syntax-blue">file.mtime</span>, <span class="syntax-green">'asc'</span>).<span class="syntax-cyan">limit</span>(4).<span class="syntax-red">file.link</span></code></pre>
+            </div>
+        </div>
+    """, unsafe_allow_html=True)
+
 def render_tree(items, parent_id=None, level=0):
     """Recursively renders a clean, Obsidian-like tree of items."""
     children = [item for item in items if item['parent_id'] == parent_id]
@@ -120,7 +156,6 @@ def render_tree(items, parent_id=None, level=0):
     for item in children:
         item_id = item['id']
         item_type = item['type']
-        indent = level * 20
         
         cols = st.columns([0.9, 0.1])
         
