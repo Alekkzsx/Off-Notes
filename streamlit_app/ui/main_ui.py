@@ -64,10 +64,9 @@ def main_app_sidebar():
             if st.button("📎 Upload", use_container_width=True):
                 upload_attachment_dialog(user_id, None)
         
-        st.markdown("---")
         st.markdown("#### Your Files")
->>>>>>> Stashed changes
     
+    user_id = st.session_state.user_id
     folders = get_folders_by_user_id(user_id)
     notes = get_notes_by_user_id(user_id)
     attachments = get_attachments_by_user_id(user_id)
@@ -76,25 +75,13 @@ def main_app_sidebar():
     tree_items += [{'id': n['id'], 'name': n['title'], 'parent_id': n['folder_id'], 'type': 'note', 'icon': '📄'} for n in notes]
     tree_items += [{'id': a['id'], 'name': a['filename'], 'parent_id': a['folder_id'], 'type': 'attachment', 'icon': '📎'} for a in attachments]
     
-    with st.sidebar:
-        render_tree(tree_items)
+    render_tree(tree_items)
 
-        # Logout button at the bottom
-        st.markdown("---")
-        if st.button("Logout"):
-            st.session_state.clear()
-            st.rerun()
-    
-    folders = get_folders_by_user_id(user_id)
-    notes = get_notes_by_user_id(user_id)
-    attachments = get_attachments_by_user_id(user_id)
-    
-    tree_items = [{'id': f['id'], 'name': f['name'], 'parent_id': f['parent_id'], 'type': 'folder', 'icon': '📁'} for f in folders]
-    tree_items += [{'id': n['id'], 'name': n['title'], 'parent_id': n['folder_id'], 'type': 'note', 'icon': '📄'} for n in notes]
-    tree_items += [{'id': a['id'], 'name': a['filename'], 'parent_id': a['folder_id'], 'type': 'attachment', 'icon': '📎'} for a in attachments]
-    
-    with st.sidebar:
-        render_tree(tree_items)
+    # Logout button at the bottom
+    st.markdown("---")
+    if st.button("Logout"):
+        st.session_state.clear()
+        st.rerun()
 
 def main_app_content():
     """Renders the main content area based on the selected item."""
