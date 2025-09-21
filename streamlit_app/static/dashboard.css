@@ -1,155 +1,176 @@
-import streamlit as st
 
-st.set_page_config(layout="wide")
+/* Obsidian-like dark theme for the Streamlit dashboard */
 
-# CSS para replicar a aparência do Obsidian, com ajustes para a sidebar.
-css_styles = """
-/* --- Reset e Tema Base --- */
-body {
-    color: #afafaf !important;
+/* Base */
+html, body, .main, .stApp {
+  background-color: #0f1113 !important;
+  color: #d7d7d7 !important;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial;
 }
 
-/* Esconder elementos padrão do Streamlit */
+/* Hide Streamlit default chrome */
 #MainMenu, header, footer {
-    visibility: hidden;
+  visibility: hidden !important;
+  height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
 }
 
+/* Block container (main area) */
 .main .block-container {
-    background-color: #282c34;
-    padding: 2rem 2rem 1rem 2rem; /* Ajuste no padding */
+  background-color: #0f1113 !important;
+  padding: 1.25rem 1.5rem !important;
+  border-radius: 6px;
+  box-shadow: none !important;
 }
 
-/* --- Barra Lateral (Sidebar) com HTML --- */
-[data-testid="stSidebar"] {
-    background-color: #282c34;
-    border-right: 1px solid #3e4451;
-    padding: 1.5rem 1rem;
+/* Sidebar (left) - mimic Obsidian file explorer */
+[data-testid="stSidebar"], .stSidebar, .css-1lcbmhc {
+  background-color: #0b0c0e !important;
+  color: #d7d7d7 !important;
+  min-width: 260px !important;
+  width: 260px !important;
+  border-right: 1px solid rgba(255,255,255,0.04) !important;
+  padding-top: 1rem !important;
 }
 
-/* Estilos para a lista de arquivos na sidebar */
-.sidebar-content h2 {
-    font-size: 1.25rem;
-    font-weight: 600;
-    color: #ffffff;
-    padding-left: 0.5rem;
+/* Sidebar header */
+[data-testid="stSidebar"] h1, [data-testid="stSidebar"] h2, .stSidebar h1, .stSidebar h2 {
+  color: #e6e6e6 !important;
+  font-weight: 600 !important;
+  font-size: 1.05rem !important;
+  margin-left: 1rem !important;
+  margin-bottom: 0.35rem !important;
 }
 
-.sidebar-content ul {
-    list-style-type: none;
-    padding: 0;
-    margin: 0;
-    font-size: 0.9rem;
+/* File list */
+.sidebar-content, .file-list, .obsidian-file-list {
+  list-style: none;
+  padding-left: 6px;
+  margin: 0.25rem 0 0 0;
 }
 
-.sidebar-content li {
-    padding: 0.3rem 0.5rem 0.3rem 1.5rem;
-    border-radius: 4px;
-    cursor: pointer;
-    margin-left: 0.5rem;
+.sidebar-content li, .file-list li, .obsidian-file-list li {
+  padding: 6px 10px;
+  margin: 2px 6px;
+  border-radius: 6px;
+  color: #cfcfcf;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.95rem;
+  transition: background-color 120ms ease, color 120ms ease;
 }
 
-.sidebar-content li:hover {
-    background-color: #3a3f4b;
+/* Active file */
+.sidebar-content li.active, .file-list li.active, .obsidian-file-list li.active {
+  background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+  border-left: 3px solid #6c9cff;
+  color: #ffffff;
+  padding-left: 8px;
 }
 
-.sidebar-content li.active {
-    background-color: #3a3f4b;
-    color: #ffffff;
-    font-weight: 500;
+/* Hover */
+.sidebar-content li:hover, .file-list li:hover, .obsidian-file-list li:hover {
+  background-color: rgba(255,255,255,0.03);
+  color: #ffffff;
 }
 
-/* --- Estilos do Conteúdo Principal --- */
-h1 { font-size: 2.5rem; font-weight: 700; color: #ffffff; border-bottom: none; }
-h2 { font-size: 1.75rem; font-weight: 600; color: #ffffff; padding-bottom: 0.5rem; border-bottom: 1px solid #3e4451; }
-h3 { font-size: 1.25rem; font-weight: 600; color: #ffffff; }
-
-/* --- Bloco de Código Customizado --- */
-.code-block {
-    background-color: #21252b;
-    border-radius: 6px;
-    padding: 1rem;
-    font-family: 'Fira Code', monospace;
-    font-size: 0.9rem;
-    margin-bottom: 1rem;
+/* Icons in list */
+.sidebar-content li .icon, .file-list li .icon {
+  width: 18px;
+  text-align: center;
+  opacity: 0.9;
 }
-.code-block pre { margin: 0; white-space: pre-wrap; }
 
-/* --- Cores de Sintaxe --- */
-.syntax-purple { color: #c678dd; } .syntax-cyan { color: #56b6c2; } .syntax-green { color: #98c379; }
-.syntax-red { color: #e06c75; } .syntax-blue { color: #61afef; }
-
-/* --- Barra de Status no Rodapé --- */
-.status-bar {
-    font-size: 0.75rem; color: #8a9199; padding-top: 1.5rem; border-top: 1px solid #3e4451;
-    display: flex; justify-content: space-between;
+/* Topbar - minimal */
+.header-bar, .topbar {
+  background: transparent;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-left: 6px;
+  color: #cfcfcf;
+  font-weight: 500;
 }
-"""
 
-ltc1q99z9lvzcrw3a32eyalrus5es3tu6d0e27lcfwy unsafe_allow_html=True)
-st.markdown('<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&family=Fira+Code&display=swap" rel="stylesheet">', unsafe_allow_html=True)
+/* Editor area */
+.streamlit-expander, .editor, .note-editor, .quill, .ql-container, .ql-editor {
+  background-color: transparent !important;
+  color: #e6e6e6 !important;
+  font-family: Menlo, Monaco, "Courier New", monospace !important;
+  font-size: 15px !important;
+  line-height: 1.6 !important;
+  border: none !important;
+  padding: 0.6rem !important;
+  min-height: 420px;
+}
 
-# --- Barra Lateral (Sidebar) ---
-# Usamos st.markdown com HTML para ter controle total sobre o layout da sidebar
-with st.sidebar:
-    st.markdown("""
-    <div class="sidebar-content">
-        <h2>Notes</h2>
-        <ul>
-            <li>› Articles</li>
-            <li>› Bible</li>
-            <li class="active">› Book Notes</li>
-            <li style="padding-left: 2.5rem;">Book Project</li>
-            <li style="padding-left: 2.5rem;">Bookworm</li>
-            <li>› Clippings</li>
-            <li>› Conferences</li>
-            <li>› Daily Notes</li>
-            <li>› Emails</li>
-            <li>› Excalidraw</li>
-            <li>› Files</li>
-            <li>› Guitar Lessons</li>
-            <li>› Inbox</li>
-        </ul>
-    </div>
-    """, unsafe_allow_html=True)
+/* Quill editor specific */
+.ql-toolbar.ql-snow, .ql-container.ql-snow {
+  background: #0b0c0e !important;
+  border: 1px solid rgba(255,255,255,0.04) !important;
+  border-radius: 6px !important;
+  box-shadow: none !important;
+}
 
-# --- Painel de Conteúdo Principal ---
-st.title("Home")
-st.header("Vault Info")
+/* Markdown output styling */
+.stMarkdown, .css-1btz1wl, .markdown-text-container {
+  color: #e6e6e6 !important;
+  font-family: Inter, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial !important;
+}
 
-st.subheader("Recent file updates")
-st.markdown("""<div class="code-block"><pre><code><span class="syntax-cyan">list</span> <span class="syntax-purple">from</span> <span class="syntax-green">""</span>
-<span class="syntax-cyan">sort</span> <span class="syntax-red">file.mtime</span>, <span class="syntax-green">"desc"</span>
-<span class="syntax-cyan">limit</span>(4)</code></pre></div>""", unsafe_allow_html=True)
+/* Headings */
+.stMarkdown h1, .stMarkdown h2, .stMarkdown h3, .stMarkdown h4 {
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  margin-top: 1.15rem !important;
+}
 
-st.subheader("Recent Ideas")
-st.markdown("""<div class="code-block"><pre><code><span class="syntax-cyan">list</span> <span class="syntax-purple">from</span> <span class="syntax-green">"Inbox"</span>
-<span class="syntax-cyan">sort</span>(<span class="syntax-red">f</span> => <span class="syntax-red">f</span>.<span class="syntax-blue">file.mtime</span>, <span class="syntax-green">'desc'</span>).<span class="syntax-cyan">limit</span>(4).<span class="syntax-red">file.link</span></code></pre></div>""", unsafe_allow_html=True)
+/* Code blocks */
+.stMarkdown pre, .stMarkdown code, .code-block, pre code {
+  background: #0b0c0e !important;
+  color: #d7d7d7 !important;
+  border-radius: 6px !important;
+  padding: 0.6rem !important;
+  font-family: Menlo, Monaco, monospace !important;
+  font-size: 13px !important;
+  border: 1px solid rgba(255,255,255,0.03) !important;
+  overflow: auto !important;
+}
 
-st.subheader("Stats")
-st.markdown("""
-- Total Files: <span class="syntax-blue">`=dv.pages("").length`</span>
-- Articles: <span class="syntax-blue">`=dv.pages("Articles").length`</span>
-- Sermon Notes: <span class="syntax-blue">`=dv.pages("Sermon Notes").length`</span>
-- Inbox Items: <span class="syntax-blue">`=dv.pages("Inbox").length`</span>
-- Journal Entries: <span class="syntax-blue">`=dv.pages("Daily Notes").length`</span>
-""", unsafe_allow_html=True)
+/* Buttons */
+.stButton>button, button[kind] {
+  background: transparent !important;
+  border: 1px solid rgba(255,255,255,0.05) !important;
+  color: #d7d7d7 !important;
+  border-radius: 6px !important;
+  padding: 6px 10px !important;
+}
 
-st.header("Book Notes")
+/* Inputs & Textareas */
+input, textarea, .stTextInput>div, .stTextArea>div {
+  background: #0b0c0e !important;
+  color: #e6e6e6 !important;
+  border: 1px solid rgba(255,255,255,0.04) !important;
+  border-radius: 6px !important;
+  padding: 6px !important;
+}
 
-st.subheader("Notes to Process")
-st.markdown("""<div class="code-block"><pre><code><span class="syntax-cyan">list</span> <span class="syntax-purple">from</span> <span class="syntax-green">#unprocessed</span>
-<span class="syntax-cyan">sort</span>(<span class="syntax-red">f</span> => <span class="syntax-red">f</span>.<span class="syntax-blue">file.mtime</span>, <span class="syntax-green">'asc'</span>).<span class="syntax-cyan">limit</span>(4).<span class="syntax-red">file.link</span></code></pre></div>""", unsafe_allow_html=True)
+/* Small helpers */
+.kv, .small, .muted {
+  color: #9aa0a6 !important;
+  font-size: 0.9rem;
+}
 
-st.subheader("Recent Notes")
-st.markdown("""<div class="code-block"><pre><code><span class="syntax-cyan">list</span> <span class="syntax-purple">from</span> <span class="syntax-green">"Book Notes"</span>
-<span class="syntax-cyan">sort</span>(<span class="syntax-red">f</span> => <span class="syntax-red">f</span>.<span class="syntax-blue">file.mtime</span>, <span class="syntax-green">'desc'</span>).<span class="syntax-cyan">limit</span>(4).<span class="syntax-red">file.link</span></code></pre></div>""", unsafe_allow_html=True)
+/* Responsive adjustments */
+@media (max-width: 900px) {
+  [data-testid="stSidebar"], .stSidebar {
+    width: 220px !important;
+    min-width: 220px !important;
+  }
+}
 
-st.subheader("★ Favorites")
-st.markdown("""<div class="code-block"><pre><code><span class="syntax-cyan">list</span> <span class="syntax-purple">from</span> <span class="syntax-green">"Book Notes"</span> and <span class="syntax-green">#favorite</span>
-<span class="syntax-cyan">sort</span>(<span class="syntax-red">f</span> => <span class="syntax-red">f</span>.<span class="syntax-blue">file.mtime</span>, <span class="syntax-green">'desc'</span>).<span class="syntax-cyan">limit</span>(4).<span class="syntax-red">file.link</span></code></pre></div>""", unsafe_allow_html=True)
-
-# Rodapé customizado para simular a barra de status
-st.markdown("""<div class="status-bar">
-    <div><span>1 min read</span> | <span>1 backlink</span></div>
-    <div><span>246 words</span> | <span>1515 characters</span></div>
-</div>""", unsafe_allow_html=True)
+/* End of Obsidian-like theme */

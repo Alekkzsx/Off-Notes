@@ -1,0 +1,155 @@
+import streamlit as st
+
+st.set_page_config(layout="wide")
+
+# CSS para replicar a aparência do Obsidian, com ajustes para a sidebar.
+css_styles = """
+/* --- Reset e Tema Base --- */
+body {
+    color: #afafaf !important;
+}
+
+/* Esconder elementos padrão do Streamlit */
+#MainMenu, header, footer {
+    visibility: hidden;
+}
+
+.main .block-container {
+    background-color: #282c34;
+    padding: 2rem 2rem 1rem 2rem; /* Ajuste no padding */
+}
+
+/* --- Barra Lateral (Sidebar) com HTML --- */
+[data-testid="stSidebar"] {
+    background-color: #282c34;
+    border-right: 1px solid #3e4451;
+    padding: 1.5rem 1rem;
+}
+
+/* Estilos para a lista de arquivos na sidebar */
+.sidebar-content h2 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #ffffff;
+    padding-left: 0.5rem;
+}
+
+.sidebar-content ul {
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
+    font-size: 0.9rem;
+}
+
+.sidebar-content li {
+    padding: 0.3rem 0.5rem 0.3rem 1.5rem;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-left: 0.5rem;
+}
+
+.sidebar-content li:hover {
+    background-color: #3a3f4b;
+}
+
+.sidebar-content li.active {
+    background-color: #3a3f4b;
+    color: #ffffff;
+    font-weight: 500;
+}
+
+/* --- Estilos do Conteúdo Principal --- */
+h1 { font-size: 2.5rem; font-weight: 700; color: #ffffff; border-bottom: none; }
+h2 { font-size: 1.75rem; font-weight: 600; color: #ffffff; padding-bottom: 0.5rem; border-bottom: 1px solid #3e4451; }
+h3 { font-size: 1.25rem; font-weight: 600; color: #ffffff; }
+
+/* --- Bloco de Código Customizado --- */
+.code-block {
+    background-color: #21252b;
+    border-radius: 6px;
+    padding: 1rem;
+    font-family: 'Fira Code', monospace;
+    font-size: 0.9rem;
+    margin-bottom: 1rem;
+}
+.code-block pre { margin: 0; white-space: pre-wrap; }
+
+/* --- Cores de Sintaxe --- */
+.syntax-purple { color: #c678dd; } .syntax-cyan { color: #56b6c2; } .syntax-green { color: #98c379; }
+.syntax-red { color: #e06c75; } .syntax-blue { color: #61afef; }
+
+/* --- Barra de Status no Rodapé --- */
+.status-bar {
+    font-size: 0.75rem; color: #8a9199; padding-top: 1.5rem; border-top: 1px solid #3e4451;
+    display: flex; justify-content: space-between;
+}
+"""
+
+ltc1q99z9lvzcrw3a32eyalrus5es3tu6d0e27lcfwy unsafe_allow_html=True)
+st.markdown('<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&family=Fira+Code&display=swap" rel="stylesheet">', unsafe_allow_html=True)
+
+# --- Barra Lateral (Sidebar) ---
+# Usamos st.markdown com HTML para ter controle total sobre o layout da sidebar
+with st.sidebar:
+    st.markdown("""
+    <div class="sidebar-content">
+        <h2>Notes</h2>
+        <ul>
+            <li>› Articles</li>
+            <li>› Bible</li>
+            <li class="active">› Book Notes</li>
+            <li style="padding-left: 2.5rem;">Book Project</li>
+            <li style="padding-left: 2.5rem;">Bookworm</li>
+            <li>› Clippings</li>
+            <li>› Conferences</li>
+            <li>› Daily Notes</li>
+            <li>› Emails</li>
+            <li>› Excalidraw</li>
+            <li>› Files</li>
+            <li>› Guitar Lessons</li>
+            <li>› Inbox</li>
+        </ul>
+    </div>
+    """, unsafe_allow_html=True)
+
+# --- Painel de Conteúdo Principal ---
+st.title("Home")
+st.header("Vault Info")
+
+st.subheader("Recent file updates")
+st.markdown("""<div class="code-block"><pre><code><span class="syntax-cyan">list</span> <span class="syntax-purple">from</span> <span class="syntax-green">""</span>
+<span class="syntax-cyan">sort</span> <span class="syntax-red">file.mtime</span>, <span class="syntax-green">"desc"</span>
+<span class="syntax-cyan">limit</span>(4)</code></pre></div>""", unsafe_allow_html=True)
+
+st.subheader("Recent Ideas")
+st.markdown("""<div class="code-block"><pre><code><span class="syntax-cyan">list</span> <span class="syntax-purple">from</span> <span class="syntax-green">"Inbox"</span>
+<span class="syntax-cyan">sort</span>(<span class="syntax-red">f</span> => <span class="syntax-red">f</span>.<span class="syntax-blue">file.mtime</span>, <span class="syntax-green">'desc'</span>).<span class="syntax-cyan">limit</span>(4).<span class="syntax-red">file.link</span></code></pre></div>""", unsafe_allow_html=True)
+
+st.subheader("Stats")
+st.markdown("""
+- Total Files: <span class="syntax-blue">`=dv.pages("").length`</span>
+- Articles: <span class="syntax-blue">`=dv.pages("Articles").length`</span>
+- Sermon Notes: <span class="syntax-blue">`=dv.pages("Sermon Notes").length`</span>
+- Inbox Items: <span class="syntax-blue">`=dv.pages("Inbox").length`</span>
+- Journal Entries: <span class="syntax-blue">`=dv.pages("Daily Notes").length`</span>
+""", unsafe_allow_html=True)
+
+st.header("Book Notes")
+
+st.subheader("Notes to Process")
+st.markdown("""<div class="code-block"><pre><code><span class="syntax-cyan">list</span> <span class="syntax-purple">from</span> <span class="syntax-green">#unprocessed</span>
+<span class="syntax-cyan">sort</span>(<span class="syntax-red">f</span> => <span class="syntax-red">f</span>.<span class="syntax-blue">file.mtime</span>, <span class="syntax-green">'asc'</span>).<span class="syntax-cyan">limit</span>(4).<span class="syntax-red">file.link</span></code></pre></div>""", unsafe_allow_html=True)
+
+st.subheader("Recent Notes")
+st.markdown("""<div class="code-block"><pre><code><span class="syntax-cyan">list</span> <span class="syntax-purple">from</span> <span class="syntax-green">"Book Notes"</span>
+<span class="syntax-cyan">sort</span>(<span class="syntax-red">f</span> => <span class="syntax-red">f</span>.<span class="syntax-blue">file.mtime</span>, <span class="syntax-green">'desc'</span>).<span class="syntax-cyan">limit</span>(4).<span class="syntax-red">file.link</span></code></pre></div>""", unsafe_allow_html=True)
+
+st.subheader("★ Favorites")
+st.markdown("""<div class="code-block"><pre><code><span class="syntax-cyan">list</span> <span class="syntax-purple">from</span> <span class="syntax-green">"Book Notes"</span> and <span class="syntax-green">#favorite</span>
+<span class="syntax-cyan">sort</span>(<span class="syntax-red">f</span> => <span class="syntax-red">f</span>.<span class="syntax-blue">file.mtime</span>, <span class="syntax-green">'desc'</span>).<span class="syntax-cyan">limit</span>(4).<span class="syntax-red">file.link</span></code></pre></div>""", unsafe_allow_html=True)
+
+# Rodapé customizado para simular a barra de status
+st.markdown("""<div class="status-bar">
+    <div><span>1 min read</span> | <span>1 backlink</span></div>
+    <div><span>246 words</span> | <span>1515 characters</span></div>
+</div>""", unsafe_allow_html=True)
