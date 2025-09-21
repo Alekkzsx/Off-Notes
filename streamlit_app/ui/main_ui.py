@@ -30,40 +30,11 @@ def upload_attachment_dialog(user_id, parent_id=None):
             st.warning("Please choose a file to upload.")
 
 def main_app_sidebar():
-    """Renders the main application sidebar with an Obsidian-like feel."""
+    """Renders the main application sidebar."""
     with st.sidebar:
-        # This container simulates the far-left icon bar
-        st.markdown("""
-            <div style="
-                position: absolute;
-                top: 0;
-                left: 0;
-                height: 100%;
-                width: 56px; /* w-16 equivalent */
-                background-color: #202326;
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                padding-top: 0.5rem;
-                gap: 1rem;
-                border-right: 1px solid #4a4a4a;
-            ">
-                <div class="sidebar-icon" title="Notes">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
-                </div>
-                <div class="sidebar-icon" title="Files">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
-                </div>
-            </div>
-        """, unsafe_allow_html=True)
-
-        # This div pushes the file explorer content to the right of the icon bar
-        st.markdown('<div style="margin-left: 60px; padding-top: 0.5rem;">', unsafe_allow_html=True)
+        st.header("Notes")
         
         user_id = st.session_state.user_id
-        
-        st.markdown("##### Your Files")
-        
         folders = get_folders_by_user_id(user_id)
         notes = get_notes_by_user_id(user_id)
         attachments = get_attachments_by_user_id(user_id)
@@ -78,8 +49,6 @@ def main_app_sidebar():
         if st.button("Logout"):
             st.session_state.clear()
             st.rerun()
-            
-        st.markdown('</div>', unsafe_allow_html=True)
 
 def main_app_content():
     """Renders the main content area based on the selected item."""
@@ -89,8 +58,6 @@ def main_app_content():
 
     item_type = st.session_state.selected_item_type
     item_id = st.session_state.selected_item
-
-    st.markdown('<div class="main-content-container">', unsafe_allow_html=True)
 
     if item_type == "note":
         note = get_note_by_id(item_id)
@@ -112,40 +79,48 @@ def main_app_content():
                 st.image(attachment['file_data'])
             else:
                 st.download_button(f"Download {attachment['filename']}", attachment['file_data'], attachment['filename'])
-    
-    st.markdown('</div>', unsafe_allow_html=True)
 
 def render_home_page():
-    """Renders the default home page content from the user's HTML."""
+    """Renders the default home page content."""
+    st.title("Home")
+    st.header("Vault Info")
+
+    st.subheader("Recent file updates")
     st.markdown("""
-        <div class="main-content-container">
-            <h1>Home</h1>
-            
-            <h2>Vault Info</h2>
-            <div style="margin-left: 1rem;">
-                <h3>Recent file updates</h3>
-                <div class="code-block">
-                    <pre><code><span class="syntax-cyan">list</span> <span class="syntax-purple">from</span> <span class="syntax-green">""</span>
+    <div class="code-block">
+    <pre><code><span class="syntax-cyan">list</span> <span class="syntax-purple">from</span> <span class="syntax-green">""</span>
 <span class="syntax-cyan">sort</span> <span class="syntax-red">file.mtime</span>, <span class="syntax-green">"desc"</span>
 <span class="syntax-cyan">limit</span>(4)</code></pre>
-                </div>
-                
-                <h3>Recent Ideas</h3>
-                <div class="code-block">
-                    <pre><code><span class="syntax-cyan">list</span> <span class="syntax-purple">from</span> <span class="syntax-green">"Inbox"</span>
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.subheader("Recent Ideas")
+    st.markdown("""
+    <div class="code-block">
+    <pre><code><span class="syntax-cyan">list</span> <span class="syntax-purple">from</span> <span class="syntax-green">"Inbox"</span>
 <span class="syntax-cyan">sort</span>(<span class="syntax-red">f</span> => <span class="syntax-red">f</span>.<span class="syntax-blue">file.mtime</span>, <span class="syntax-green">'desc'</span>).<span class="syntax-cyan">limit</span>(4).<span class="syntax-red">file.link</span></code></pre>
-                </div>
-            </div>
-            
-            <h2 style="margin-top: 3rem;">Book Notes</h2>
-            <div style="margin-left: 1rem;">
-                <h3>Notes to Process</h3>
-                <div class="code-block">
-                    <pre><code><span class="syntax-cyan">list</span> <span class="syntax-purple">from</span> <span class="syntax-green">#unprocessed</span>
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.header("Book Notes")
+
+    st.subheader("Notes to Process")
+    st.markdown("""
+    <div class="code-block">
+    <pre><code><span class="syntax-cyan">list</span> <span class="syntax-purple">from</span> <span class="syntax-green">#unprocessed</span>
 <span class="syntax-cyan">sort</span>(<span class="syntax-red">f</span> => <span class="syntax-red">f</span>.<span class="syntax-blue">file.mtime</span>, <span class="syntax-green">'asc'</span>).<span class="syntax-cyan">limit</span>(4).<span class="syntax-red">file.link</span></code></pre>
-                </div>
-            </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.markdown("""
+    <div class="status-bar">
+        <div>
+            <span>1 min read</span> | <span>1 backlink</span>
         </div>
+        <div>
+            <span>246 words</span> | <span>1515 characters</span>
+        </div>
+    </div>
     """, unsafe_allow_html=True)
 
 def render_tree(items, parent_id=None, level=0):

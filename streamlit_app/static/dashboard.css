@@ -1,91 +1,86 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&family=Fira+Code&display=swap');
 
+/* --- Reset e Tema Base --- */
 body {
     font-family: 'Inter', sans-serif;
-    background-color: #1e1e1e;
-    color: #afafaf;
+    color: #afafaf !important;
 }
 
-.font-code {
-    font-family: 'Fira Code', monospace;
-}
+/* Esconder o menu e o cabeçalho/rodapé padrão do Streamlit */
+#MainMenu {visibility: hidden;}
+header {visibility: hidden;}
+footer {visibility: hidden;}
 
-/* --- Layout Containers --- */
-div[data-testid="stSidebar"] > div:first-child {
-    background-color: #282c34; /* File Explorer Panel */
-}
-
-div.main {
-    background-color: #282c34; /* Main Content Panel */
-    padding: 0;
-}
-
-/* --- Sidebar --- */
-.sidebar-icon {
-    color: #afafaf;
-    cursor: pointer;
-}
-.sidebar-icon:hover {
-    color: #ffffff;
-}
-
-.file-item {
-    color: #afafaf;
-}
-.file-item:hover {
-    background-color: #2a2d31;
-}
-.file-item.active {
-    background-color: #2a2d31;
-    color: #ffffff;
-    font-weight: 500;
-}
-
-/* --- Main Content --- */
-.main-content-container {
-    padding: 2rem;
-    max-width: 900px;
-}
-
-h1, h2, h3 {
-    color: #ffffff;
-    font-weight: 700;
-}
-
-h1 { font-size: 2rem; margin-bottom: 2rem; }
-h2 { font-size: 1.5rem; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid #4a4a4a; }
-h3 { font-size: 1.25rem; margin-top: 1rem; margin-bottom: 1rem; }
-
-/* --- Code Block --- */
-.code-block {
+/* Fundo principal da aplicação */
+.main .block-container {
     background-color: #282c34;
-    border: 1px solid #4a4a4a;
+    padding-top: 2rem;
+}
+
+/* --- Barra Lateral (Sidebar) --- */
+[data-testid="stSidebar"] {
+    background-color: #282c34;
+    border-right: 1px solid #3e4451;
+}
+
+[data-testid="stSidebar"] h2 {
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+[data-testid="stSidebar"] .stMarkdown {
+    padding-left: 10px;
+}
+
+/* --- Estilos do Conteúdo Principal --- */
+h1 {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: #ffffff;
+    border-bottom: none;
+}
+
+h2 {
+    font-size: 1.75rem;
+    font-weight: 600;
+    color: #ffffff;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid #3e4451;
+}
+
+h3 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #ffffff;
+}
+
+/* --- Bloco de Código Customizado --- */
+.code-block {
+    background-color: #21252b;
     border-radius: 6px;
     padding: 1rem;
     font-family: 'Fira Code', monospace;
     font-size: 0.9rem;
-    overflow-x: auto;
+    margin-bottom: 1rem;
 }
+.code-block pre {
+    margin: 0;
+    white-space: pre-wrap;
+}
+
+/* --- Estilos para "Syntax Highlighting" --- */
 .syntax-purple { color: #c678dd; }
 .syntax-cyan { color: #56b6c2; }
 .syntax-green { color: #98c379; }
 .syntax-red { color: #e06c75; }
 .syntax-blue { color: #61afef; }
 
-/* --- Streamlit Specific Overrides --- */
-div[data-testid="stSidebar"] .stButton > button {
-    background: none;
-    border: none;
-    text-align: left !important;
-    padding: 0.2rem 0.5rem;
-    font-size: 0.9rem;
-    color: #afafaf;
-    width: 100%;
-    transition: background-color 0.2s, color 0.2s;
-    border-radius: 4px;
-}
-
-div[data-testid="stSidebar"] .stButton > button:hover {
-    background-color: #2a2d31;
-    color: #ffffff;
+/* --- Barra de Status no Rodapé --- */
+.status-bar {
+    font-size: 0.75rem;
+    color: #8a9199;
+    padding-top: 1rem;
+    border-top: 1px solid #3e4451;
+    display: flex;
+    justify-content: space-between;
 }
