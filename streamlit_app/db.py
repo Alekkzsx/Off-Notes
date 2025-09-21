@@ -103,6 +103,14 @@ def delete_folder(folder_id):
     cur.close()
 
 # --- Note Functions ---
+
+def update_folder(folder_id, new_name):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("UPDATE folders SET name = ? WHERE id = ?", (new_name, folder_id))
+    conn.commit()
+    cur.close()
+
 def create_note(user_id, folder_id=None, title="Untitled"):
     conn = get_db_connection()
     cur = conn.cursor()

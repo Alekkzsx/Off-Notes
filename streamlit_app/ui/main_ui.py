@@ -73,7 +73,28 @@ def main_app_content():
     elif item_type == "attachment":
         attachment = get_attachment_data(item_id)
         if attachment:
-            st.header(attachment['filename'])
+            
+
+    # --- Rename UI: appears when a rename target is set ---
+    if 'rename_target' in st.session_state and st.session_state.get('rename_target') is not None:
+        rt = st.session_state.rename_target
+        st.info(f"Renaming {rt['type']} (id={rt['id']})")
+        new_name = st.text_input("New name", key="rename_input")
+        cols_r = st.columns([0.2, 0.2, 0.6])
+        with cols_r[0]:
+            if st.button("Save Rename"):
+                if rt['type'] == 'folder':
+                    update_folder(rt['id'], new_name)
+                else:
+                    # note: update_note requires content; fetch current note content
+                    note = get_note_by_id(rt['id'])
+                    if note:
+                        update_note(rt['id'], new_name or note['title'], note['content'])
+                clear_rename_target()
+        with cols_r[1]:
+            if st.button("Cancel Rename"):
+                clear_rename_target()
+st.header(attachment['filename'])
             mime_type, _ = mimetypes.guess_type(attachment['filename'])
             if mime_type and "image" in mime_type:
                 st.image(attachment['file_data'])
@@ -149,6 +170,7 @@ def render_tree(items, parent_id=None, level=0):
         
         with cols[1]:
             st.button("🗑️", key=f"del_{item_type}_{item_id}", on_click=delete_item, args=(item_id, item_type))
+            st.button("✏️", key=f"rename_{item_type}_{item_id}", on_click=set_rename_target, args=(item_id, item_type))
 
         if item_type == 'folder' and item_id in st.session_state.expanded_folders:
             render_tree(items, parent_id=item_id, level=level + 1)

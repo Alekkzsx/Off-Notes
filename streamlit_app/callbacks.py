@@ -32,3 +32,14 @@ def select_and_toggle_folder(folder_id):
     """Selects and expands/collapses a folder in one action."""
     select_item(folder_id, 'folder')
     toggle_folder(folder_id)
+
+
+def set_rename_target(item_id, item_type):
+    """Sets which item is being renamed."""
+    st.session_state.rename_target = {'id': item_id, 'type': item_type}
+    st.rerun()
+
+def clear_rename_target():
+    if 'rename_target' in st.session_state:
+        del st.session_state['rename_target']
+    st.rerun()
