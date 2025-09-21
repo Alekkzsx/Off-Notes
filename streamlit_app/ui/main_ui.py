@@ -5,7 +5,7 @@ from db import (
     get_folders_by_user_id, get_notes_by_user_id, get_attachments_by_user_id,
     get_note_by_id, update_note, get_attachment_data, create_folder, create_attachment
 )
-from callbacks import create_note_and_select, select_item, delete_item, toggle_folder, select_and_toggle_folder
+from callbacks import create_note_and_select, select_item, delete_item, toggle_folder
 
 @st.dialog("Create New Folder")
 def create_folder_dialog(user_id, parent_id=None):
@@ -30,22 +30,28 @@ def upload_attachment_dialog(user_id, parent_id=None):
             st.warning("Please choose a file to upload.")
 
 def main_app_sidebar():
-    """Renders the main application sidebar."""
-    st.sidebar.title("Off-Notes")
-    st.sidebar.markdown(f"Welcome, {st.session_state.user_email}")
+    """Renders the main application sidebar with an Obsidian-like feel."""
+    st.sidebar.markdown(f"### Welcome, {st.session_state.user_email.split('@')[0]}")
     if st.sidebar.button("Logout"):
         st.session_state.clear()
         st.rerun()
 
+    st.sidebar.markdown("---")
+
     user_id = st.session_state.user_id
     c1, c2, c3 = st.sidebar.columns(3)
-    c1.button("➕ Note", on_click=create_note_and_select, args=(user_id, None))
-    if c2.button("📁 Folder"):
-        create_folder_dialog(user_id, None)
-    if c3.button("📎 Upload"):
-        upload_attachment_dialog(user_id, None)
+    with c1:
+        if st.button("➕ Note", use_container_width=True):
+            create_note_and_select(user_id, None)
+    with c2:
+        if st.button("📁 Folder", use_container_width=True):
+            create_folder_dialog(user_id, None)
+    with c3:
+        if st.button("📎 Upload", use_container_width=True):
+            upload_attachment_dialog(user_id, None)
     
     st.sidebar.markdown("---")
+    st.sidebar.markdown("#### Your Files")
     
     folders = get_folders_by_user_id(user_id)
     notes = get_notes_by_user_id(user_id)
@@ -70,7 +76,7 @@ def main_app_content():
     if item_type == "note":
         note = get_note_by_id(item_id)
         if note:
-            title = st.text_input("Title", value=note["title"])
+            title = st.text_input("Title", value=note["title"], label_visibility="collapsed")
             content = st_quill(value=note["content"], html=True, key="quill")
             if st.button("Save"):
                 update_note(item_id, title, content)
@@ -89,45 +95,32 @@ def main_app_content():
                 st.download_button(f"Download {attachment['filename']}", attachment['file_data'], attachment['filename'])
 
 def render_tree(items, parent_id=None, level=0):
-    """Recursively renders a tree of folders, notes, and attachments with a clean, indented look."""
+    """Recursively renders a clean, Obsidian-like tree of items."""
     children = [item for item in items if item['parent_id'] == parent_id]
-    
-    st.markdown("""
-        <style>
-            div[data-testid="stButton"] > button {
-                padding: 0.1rem 0.3rem;
-                font-size: 0.8rem;
-                border: none;
-                background: none;
-                text-align: left !important;
-                width: 100%;
-            }
-        </style>
-    """, unsafe_allow_html=True)
 
     for item in children:
         item_id = item['id']
         item_type = item['type']
+        indent = level * 20
         
-        if item_type == 'folder':
-            is_expanded = item_id in st.session_state.expanded_folders
-            arrow_icon = "▼" if is_expanded else "▶"
-            
-            cols = st.columns([0.6 + (level * 0.05), 0.1, 0.1, 0.1])
-            
-            cols[0].button(f"{arrow_icon} {item['icon']} {item['name']}", key=f"select_{item_type}_{item_id}", on_click=select_and_toggle_folder, args=(item_id,))
-            
-            cols[1].button("➕", key=f"add_note_{item_id}", on_click=create_note_and_select, args=(st.session_state.user_id, item_id))
-            if cols[2].button("📁", key=f"add_folder_{item_id}"):
-                create_folder_dialog(st.session_state.user_id, item_id)
-            cols[3].button("🗑️", key=f"del_{item_type}_{item_id}", on_click=delete_item, args=(item_id, item_type))
+        cols = st.columns([0.9, 0.1])
+        
+        with cols[0]:
+            if item_type == 'folder':
+                is_expanded = item_id in st.session_state.expanded_folders
+                arrow_icon = "▼" if is_expanded else "▶"
+                st.button(f"{' ' * level * 2}{arrow_icon} {item['icon']} {item['name']}", 
+                          key=f"toggle_{item_type}_{item_id}", 
+                          on_click=toggle_folder, args=(item_id,),
+                          use_container_width=True)
+            else:
+                st.button(f"{' ' * level * 2} {item['icon']} {item['name']}", 
+                          key=f"select_{item_type}_{item_id}", 
+                          on_click=select_item, args=(item_id, item_type),
+                          use_container_width=True)
+        
+        with cols[1]:
+            st.button("🗑️", key=f"del_{item_type}_{item_id}", on_click=delete_item, args=(item_id, item_type))
 
-            if is_expanded:
-                render_tree(items, parent_id=item_id, level=level + 1)
-        else:
-            indent_level = level + 1
-            cols = st.columns([0.1 + (indent_level * 0.05), 0.8 - (indent_level * 0.05), 0.1])
-            
-            cols[1].button(f"{item['icon']} {item['name']}", key=f"select_{item_type}_{item_id}", on_click=select_item, args=(item_id, item_type))
-            
-            cols[2].button("🗑️", key=f"del_{item_type}_{item_id}", on_click=delete_item, args=(item_id, item_type))
+        if item_type == 'folder' and item_id in st.session_state.expanded_folders:
+            render_tree(items, parent_id=item_id, level=level + 1)
