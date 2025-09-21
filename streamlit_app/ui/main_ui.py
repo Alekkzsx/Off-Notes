@@ -31,27 +31,59 @@ def upload_attachment_dialog(user_id, parent_id=None):
 
 def main_app_sidebar():
     """Renders the main application sidebar with an Obsidian-like feel."""
-    st.sidebar.markdown(f"### Welcome, {st.session_state.user_email.split('@')[0]}")
-    if st.sidebar.button("Logout"):
-        st.session_state.clear()
-        st.rerun()
+    with st.sidebar:
+        # Icon bar simulation
+        st.markdown("""
+            <div style="display: flex; flex-direction: column; align-items: center; padding: 8px 0;">
+                <div class="sidebar-icon" title="Notes">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+                </div>
+                <div class="sidebar-icon" title="Files">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+                </div>
+                <div class="sidebar-icon" title="Bookmarks">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"></path></svg>
+                </div>
+                <div class="sidebar-icon" title="Favorites">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                </div>
+            </div>
+        """, unsafe_allow_html=True)
 
-    st.sidebar.markdown("---")
+        st.markdown("---")
 
-    user_id = st.session_state.user_id
-    c1, c2, c3 = st.sidebar.columns(3)
-    with c1:
-        if st.button("➕ Note", use_container_width=True):
-            create_note_and_select(user_id, None)
-    with c2:
-        if st.button("📁 Folder", use_container_width=True):
-            create_folder_dialog(user_id, None)
-    with c3:
-        if st.button("📎 Upload", use_container_width=True):
-            upload_attachment_dialog(user_id, None)
+        user_id = st.session_state.user_id
+        c1, c2, c3 = st.columns(3)
+        with c1:
+            if st.button("➕ Note", use_container_width=True):
+                create_note_and_select(user_id, None)
+        with c2:
+            if st.button("📁 Folder", use_container_width=True):
+                create_folder_dialog(user_id, None)
+        with c3:
+            if st.button("📎 Upload", use_container_width=True):
+                upload_attachment_dialog(user_id, None)
+        
+        st.markdown("---")
+        st.markdown("#### Your Files")
+>>>>>>> Stashed changes
     
-    st.sidebar.markdown("---")
-    st.sidebar.markdown("#### Your Files")
+    folders = get_folders_by_user_id(user_id)
+    notes = get_notes_by_user_id(user_id)
+    attachments = get_attachments_by_user_id(user_id)
+    
+    tree_items = [{'id': f['id'], 'name': f['name'], 'parent_id': f['parent_id'], 'type': 'folder', 'icon': '📁'} for f in folders]
+    tree_items += [{'id': n['id'], 'name': n['title'], 'parent_id': n['folder_id'], 'type': 'note', 'icon': '📄'} for n in notes]
+    tree_items += [{'id': a['id'], 'name': a['filename'], 'parent_id': a['folder_id'], 'type': 'attachment', 'icon': '📎'} for a in attachments]
+    
+    with st.sidebar:
+        render_tree(tree_items)
+
+        # Logout button at the bottom
+        st.markdown("---")
+        if st.button("Logout"):
+            st.session_state.clear()
+            st.rerun()
     
     folders = get_folders_by_user_id(user_id)
     notes = get_notes_by_user_id(user_id)
