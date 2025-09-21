@@ -24,14 +24,15 @@ def initialize_session():
 def main():
     """Main function to run the Streamlit app."""
     st.set_page_config(layout="wide")
-    load_css("streamlit_app/static/style.css")
     initialize_session()
     init_db()
 
     if st.session_state.logged_in:
+        load_css("streamlit_app/static/dashboard.css")
         main_app_sidebar()
         main_app_content()
     else:
+        load_css("streamlit_app/static/auth.css")
         if st.session_state.page == "login":
             login_page()
         else:
