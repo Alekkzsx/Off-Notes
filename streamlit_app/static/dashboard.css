@@ -3,7 +3,7 @@
 body {
     font-family: 'Inter', sans-serif;
     background-color: #1e1e1e;
-    color: #afafaf; /* Default text color */
+    color: #afafaf;
 }
 
 .font-code {
@@ -17,47 +17,31 @@ div[data-testid="stSidebar"] > div:first-child {
 
 div.main {
     background-color: #282c34; /* Main Content Panel */
-    padding: 0; /* Remove default padding */
+    padding: 0;
 }
 
-/* --- Sidebar Icons --- */
+/* --- Sidebar --- */
 .sidebar-icon {
     color: #afafaf;
     cursor: pointer;
-    padding: 8px;
-    border-radius: 6px;
 }
 .sidebar-icon:hover {
     color: #ffffff;
+}
+
+.file-item {
+    color: #afafaf;
+}
+.file-item:hover {
     background-color: #2a2d31;
 }
-
-/* --- File Tree Styling --- */
-div[data-testid="stSidebar"] .stButton > button {
-    background: none;
-    border: none;
-    text-align: left !important;
-    padding: 0.2rem 0.5rem;
-    font-size: 0.9rem;
-    color: #afafaf; /* file-item color */
-    width: 100%;
-    transition: background-color 0.2s, color 0.2s;
-    border-radius: 4px;
-}
-
-div[data-testid="stSidebar"] .stButton > button:hover {
-    background-color: #2a2d31;
-    color: #ffffff;
-}
-
-/* Active file-item simulation */
-div[data-testid="stSidebar"] .stButton > button.active {
+.file-item.active {
     background-color: #2a2d31;
     color: #ffffff;
     font-weight: 500;
 }
 
-/* --- Main Content Styling --- */
+/* --- Main Content --- */
 .main-content-container {
     padding: 2rem;
     max-width: 900px;
@@ -72,7 +56,7 @@ h1 { font-size: 2rem; margin-bottom: 2rem; }
 h2 { font-size: 1.5rem; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid #4a4a4a; }
 h3 { font-size: 1.25rem; margin-top: 1rem; margin-bottom: 1rem; }
 
-/* --- Code Block Styling --- */
+/* --- Code Block --- */
 .code-block {
     background-color: #282c34;
     border: 1px solid #4a4a4a;
@@ -87,3 +71,21 @@ h3 { font-size: 1.25rem; margin-top: 1rem; margin-bottom: 1rem; }
 .syntax-green { color: #98c379; }
 .syntax-red { color: #e06c75; }
 .syntax-blue { color: #61afef; }
+
+/* --- Streamlit Specific Overrides --- */
+div[data-testid="stSidebar"] .stButton > button {
+    background: none;
+    border: none;
+    text-align: left !important;
+    padding: 0.2rem 0.5rem;
+    font-size: 0.9rem;
+    color: #afafaf;
+    width: 100%;
+    transition: background-color 0.2s, color 0.2s;
+    border-radius: 4px;
+}
+
+div[data-testid="stSidebar"] .stButton > button:hover {
+    background-color: #2a2d31;
+    color: #ffffff;
+}

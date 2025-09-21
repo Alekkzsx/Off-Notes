@@ -32,18 +32,19 @@ def upload_attachment_dialog(user_id, parent_id=None):
 def main_app_sidebar():
     """Renders the main application sidebar with an Obsidian-like feel."""
     with st.sidebar:
+        # This container simulates the far-left icon bar
         st.markdown("""
             <div style="
                 position: absolute;
                 top: 0;
                 left: 0;
                 height: 100%;
-                width: 50px;
+                width: 56px; /* w-16 equivalent */
                 background-color: #202326;
                 display: flex;
                 flex-direction: column;
                 align-items: center;
-                padding-top: 1rem;
+                padding-top: 0.5rem;
                 gap: 1rem;
                 border-right: 1px solid #4a4a4a;
             ">
@@ -56,23 +57,13 @@ def main_app_sidebar():
             </div>
         """, unsafe_allow_html=True)
 
-        st.markdown(f'<div style="margin-left: 60px;">', unsafe_allow_html=True)
+        # This div pushes the file explorer content to the right of the icon bar
+        st.markdown('<div style="margin-left: 60px; padding-top: 0.5rem;">', unsafe_allow_html=True)
         
         user_id = st.session_state.user_id
-        c1, c2, c3 = st.columns(3)
-        with c1:
-            if st.button("➕ Note", use_container_width=True):
-                create_note_and_select(user_id, None)
-        with c2:
-            if st.button("📁 Folder", use_container_width=True):
-                create_folder_dialog(user_id, None)
-        with c3:
-            if st.button("📎 Upload", use_container_width=True):
-                upload_attachment_dialog(user_id, None)
         
-        st.markdown("---")
-        st.markdown("#### Your Files")
-    
+        st.markdown("##### Your Files")
+        
         folders = get_folders_by_user_id(user_id)
         notes = get_notes_by_user_id(user_id)
         attachments = get_attachments_by_user_id(user_id)
@@ -99,6 +90,8 @@ def main_app_content():
     item_type = st.session_state.selected_item_type
     item_id = st.session_state.selected_item
 
+    st.markdown('<div class="main-content-container">', unsafe_allow_html=True)
+
     if item_type == "note":
         note = get_note_by_id(item_id)
         if note:
@@ -119,32 +112,38 @@ def main_app_content():
                 st.image(attachment['file_data'])
             else:
                 st.download_button(f"Download {attachment['filename']}", attachment['file_data'], attachment['filename'])
+    
+    st.markdown('</div>', unsafe_allow_html=True)
 
 def render_home_page():
-    """Renders the default home page content."""
+    """Renders the default home page content from the user's HTML."""
     st.markdown("""
         <div class="main-content-container">
             <h1>Home</h1>
             
             <h2>Vault Info</h2>
-            <h3>Recent file updates</h3>
-            <div class="code-block">
-                <pre><code><span class="syntax-cyan">list</span> <span class="syntax-purple">from</span> <span class="syntax-green">""</span>
+            <div style="margin-left: 1rem;">
+                <h3>Recent file updates</h3>
+                <div class="code-block">
+                    <pre><code><span class="syntax-cyan">list</span> <span class="syntax-purple">from</span> <span class="syntax-green">""</span>
 <span class="syntax-cyan">sort</span> <span class="syntax-red">file.mtime</span>, <span class="syntax-green">"desc"</span>
 <span class="syntax-cyan">limit</span>(4)</code></pre>
+                </div>
+                
+                <h3>Recent Ideas</h3>
+                <div class="code-block">
+                    <pre><code><span class="syntax-cyan">list</span> <span class="syntax-purple">from</span> <span class="syntax-green">"Inbox"</span>
+<span class="syntax-cyan">sort</span>(<span class="syntax-red">f</span> => <span class="syntax-red">f</span>.<span class="syntax-blue">file.mtime</span>, <span class="syntax-green">'desc'</span>).<span class="syntax-cyan">limit</span>(4).<span class="syntax-red">file.link</span></code></pre>
+                </div>
             </div>
             
-            <h3>Recent Ideas</h3>
-            <div class="code-block">
-                <pre><code><span class="syntax-cyan">list</span> <span class="syntax-purple">from</span> <span class="syntax-green">"Inbox"</span>
-<span class="syntax-cyan">sort</span>(<span class="syntax-red">f</span> => <span class="syntax-red">f</span>.<span class="syntax-blue">file.mtime</span>, <span class="syntax-green">'desc'</span>).<span class="syntax-cyan">limit</span>(4).<span class="syntax-red">file.link</span></code></pre>
-            </div>
-
-            <h2>Book Notes</h2>
-            <h3>Notes to Process</h3>
-            <div class="code-block">
-                <pre><code><span class="syntax-cyan">list</span> <span class="syntax-purple">from</span> <span class="syntax-green">#unprocessed</span>
+            <h2 style="margin-top: 3rem;">Book Notes</h2>
+            <div style="margin-left: 1rem;">
+                <h3>Notes to Process</h3>
+                <div class="code-block">
+                    <pre><code><span class="syntax-cyan">list</span> <span class="syntax-purple">from</span> <span class="syntax-green">#unprocessed</span>
 <span class="syntax-cyan">sort</span>(<span class="syntax-red">f</span> => <span class="syntax-red">f</span>.<span class="syntax-blue">file.mtime</span>, <span class="syntax-green">'asc'</span>).<span class="syntax-cyan">limit</span>(4).<span class="syntax-red">file.link</span></code></pre>
+                </div>
             </div>
         </div>
     """, unsafe_allow_html=True)
@@ -163,12 +162,12 @@ def render_tree(items, parent_id=None, level=0):
             if item_type == 'folder':
                 is_expanded = item_id in st.session_state.expanded_folders
                 arrow_icon = "▼" if is_expanded else "▶"
-                st.button(f"{' ' * level * 2}{arrow_icon} {item['icon']} {item['name']}", 
+                st.button(f"{' ' * level * 4}{arrow_icon} {item['icon']} {item['name']}", 
                           key=f"toggle_{item_type}_{item_id}", 
                           on_click=toggle_folder, args=(item_id,),
                           use_container_width=True)
             else:
-                st.button(f"{' ' * level * 2} {item['icon']} {item['name']}", 
+                st.button(f"{' ' * level * 4} {item['icon']} {item['name']}", 
                           key=f"select_{item_type}_{item_id}", 
                           on_click=select_item, args=(item_id, item_type),
                           use_container_width=True)
