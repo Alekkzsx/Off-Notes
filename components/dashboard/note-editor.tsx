@@ -1,19 +1,11 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
 import { Save } from "lucide-react"
-
-interface Note {
-  id: string
-  title: string
-  content: string
-  folder_id: string | null
-  created_at: string
-  updated_at: string
-}
+import { type Note } from "@prisma/client"
 
 interface NoteEditorProps {
   note: Note
@@ -22,39 +14,39 @@ interface NoteEditorProps {
 
 export function NoteEditor({ note, onUpdateNote }: NoteEditorProps) {
   const [title, setTitle] = useState(note.title)
-  const [content, setContent] = useState(note.content)
+  const [content, setContent] = useState(note.content || "")
   const [hasChanges, setHasChanges] = useState(false)
 
   useEffect(() => {
     setTitle(note.title)
-    setContent(note.content)
+    setContent(note.content || "")
     setHasChanges(false)
   }, [note])
 
-  useEffect(() => {
-    const titleChanged = title !== note.title
-    const contentChanged = content !== note.content
-    setHasChanges(titleChanged || contentChanged)
-  }, [title, content, note])
-
-  const handleSave = () => {
+  const handleSave = useCallback(() => {
     if (hasChanges) {
       onUpdateNote(note.id, { title, content })
       setHasChanges(false)
     }
-  }
+  }, [hasChanges, note.id, title, content, onUpdateNote])
 
-  const handleKeyDown = (e: KeyboardEvent) => {
+  useEffect(() => {
+    const titleChanged = title !== note.title
+    const contentChanged = content !== (note.content || "")
+    setHasChanges(titleChanged || contentChanged)
+  }, [title, content, note])
+
+  const handleKeyDown = useCallback((e: KeyboardEvent) => {
     if ((e.ctrlKey || e.metaKey) && e.key === "s") {
       e.preventDefault()
       handleSave()
     }
-  }
+  }, [handleSave])
 
   useEffect(() => {
     document.addEventListener("keydown", handleKeyDown)
     return () => document.removeEventListener("keydown", handleKeyDown)
-  }, [hasChanges, title, content])
+  }, [handleKeyDown])
 
   return (
     <div className="h-full flex flex-col">
@@ -85,7 +77,7 @@ export function NoteEditor({ note, onUpdateNote }: NoteEditorProps) {
       {/* Status */}
       <div className="px-4 py-2 border-t border-border/50 text-xs text-muted-foreground">
         {hasChanges ? "Unsaved changes" : "All changes saved"} • Last updated:{" "}
-        {new Date(note.updated_at).toLocaleString()}
+        {new Date(note.updatedAt).toLocaleString()}
       </div>
     </div>
   )

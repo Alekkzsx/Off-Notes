@@ -1,32 +1,22 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import type { User } from "@supabase/supabase-js"
-import { createClient } from "@/lib/supabase/client"
+import { signOut } from "next-auth/react"
+import { useRouter } from "next/navigation"
+import prisma from "@/lib/auth"
 import { Sidebar } from "./sidebar"
 import { NoteEditor } from "./note-editor"
 import { Button } from "@/components/ui/button"
 import { LogOut, Menu, X } from "lucide-react"
-import { useRouter } from "next/navigation"
-
-interface Note {
-  id: string
-  title: string
-  content: string
-  folder_id: string | null
-  created_at: string
-  updated_at: string
-}
-
-interface Folder {
-  id: string
-  name: string
-  parent_id: string | null
-  created_at: string
-}
+import { type Note, type Folder } from "@prisma/client" // Import Prisma generated types
 
 interface DashboardLayoutProps {
-  user: User
+  user: {
+    id: string
+    name?: string | null
+    email?: string | null
+    image?: string | null
+  }
 }
 
 export function DashboardLayout({ user }: DashboardLayoutProps) {
@@ -37,7 +27,6 @@ export function DashboardLayout({ user }: DashboardLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [isLoading, setIsLoading] = useState(true)
   const router = useRouter()
-  const supabase = createClient()
 
   useEffect(() => {
     loadData()
@@ -46,18 +35,17 @@ export function DashboardLayout({ user }: DashboardLayoutProps) {
   const loadData = async () => {
     try {
       // Load folders
-      const { data: foldersData, error: foldersError } = await supabase.from("folders").select("*").order("name")
-
-      if (foldersError) throw foldersError
+      const foldersData = await prisma.folder.findMany({
+        where: { userId: user.id },
+        orderBy: { name: "asc" },
+      })
       setFolders(foldersData || [])
 
       // Load notes
-      const { data: notesData, error: notesError } = await supabase
-        .from("notes")
-        .select("*")
-        .order("updated_at", { ascending: false })
-
-      if (notesError) throw notesError
+      const notesData = await prisma.note.findMany({
+        where: { userId: user.id },
+        orderBy: { updatedAt: "desc" },
+      })
       setNotes(notesData || [])
     } catch (error) {
       console.error("Error loading data:", error)
@@ -67,26 +55,21 @@ export function DashboardLayout({ user }: DashboardLayoutProps) {
   }
 
   const handleSignOut = async () => {
-    await supabase.auth.signOut()
+    await signOut({ redirect: false })
     router.push("/")
   }
 
   const createNote = async (folderId?: string) => {
     try {
-      const { data, error } = await supabase
-        .from("notes")
-        .insert({
+      const newNote = await prisma.note.create({
+        data: {
           title: "Untitled",
           content: "",
-          folder_id: folderId || null,
-          user_id: user.id,
-        })
-        .select()
-        .single()
+          folderId: folderId || null,
+          userId: user.id,
+        },
+      })
 
-      if (error) throw error
-
-      const newNote = data as Note
       setNotes([newNote, ...notes])
       setSelectedNote(newNote)
     } catch (error) {
@@ -96,17 +79,15 @@ export function DashboardLayout({ user }: DashboardLayoutProps) {
 
   const updateNote = async (noteId: string, updates: Partial<Note>) => {
     try {
-      const { error } = await supabase
-        .from("notes")
-        .update({ ...updates, updated_at: new Date().toISOString() })
-        .eq("id", noteId)
+      const updatedNote = await prisma.note.update({
+        where: { id: noteId },
+        data: { ...updates, updatedAt: new Date() },
+      })
 
-      if (error) throw error
-
-      setNotes(notes.map((note) => (note.id === noteId ? { ...note, ...updates } : note)))
+      setNotes(notes.map((note) => (note.id === noteId ? { ...note, ...updates, updatedAt: updatedNote.updatedAt } : note)))
 
       if (selectedNote?.id === noteId) {
-        setSelectedNote({ ...selectedNote, ...updates })
+        setSelectedNote({ ...selectedNote, ...updates, updatedAt: updatedNote.updatedAt })
       }
     } catch (error) {
       console.error("Error updating note:", error)
@@ -115,9 +96,9 @@ export function DashboardLayout({ user }: DashboardLayoutProps) {
 
   const deleteNote = async (noteId: string) => {
     try {
-      const { error } = await supabase.from("notes").delete().eq("id", noteId)
-
-      if (error) throw error
+      await prisma.note.delete({
+        where: { id: noteId },
+      })
 
       setNotes(notes.filter((note) => note.id !== noteId))
       if (selectedNote?.id === noteId) {
@@ -130,19 +111,14 @@ export function DashboardLayout({ user }: DashboardLayoutProps) {
 
   const createFolder = async (name: string, parentId?: string) => {
     try {
-      const { data, error } = await supabase
-        .from("folders")
-        .insert({
+      const newFolder = await prisma.folder.create({
+        data: {
           name,
-          parent_id: parentId || null,
-          user_id: user.id,
-        })
-        .select()
-        .single()
+          parentId: parentId || null,
+          userId: user.id,
+        },
+      })
 
-      if (error) throw error
-
-      const newFolder = data as Folder
       setFolders([...folders, newFolder])
     } catch (error) {
       console.error("Error creating folder:", error)
@@ -151,21 +127,25 @@ export function DashboardLayout({ user }: DashboardLayoutProps) {
 
   const deleteFolder = async (folderId: string) => {
     try {
-      const { error } = await supabase.from("folders").delete().eq("id", folderId)
-
-      if (error) throw error
+      await prisma.folder.delete({
+        where: { id: folderId },
+      })
 
       setFolders(folders.filter((folder) => folder.id !== folderId))
       // Move notes from deleted folder to root
-      setNotes(notes.map((note) => (note.folder_id === folderId ? { ...note, folder_id: null } : note)))
+      await prisma.note.updateMany({
+        where: { folderId: folderId },
+        data: { folderId: null },
+      })
+      setNotes(notes.map((note) => (note.folderId === folderId ? { ...note, folderId: null } : note)))
     } catch (error) {
       console.error("Error deleting folder:", error)
     }
   }
 
   const filteredNotes = selectedFolder
-    ? notes.filter((note) => note.folder_id === selectedFolder)
-    : notes.filter((note) => note.folder_id === null)
+    ? notes.filter((note) => note.folderId === selectedFolder)
+    : notes.filter((note) => note.folderId === null)
 
   if (isLoading) {
     return (
