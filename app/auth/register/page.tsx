@@ -6,8 +6,6 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { signIn } from "next-auth/react"
-import { hash } from "bcryptjs"
-import prisma from "@/lib/auth"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -40,30 +38,41 @@ export default function RegisterPage() {
     }
 
     try {
-      const hashedPassword = await hash(password, 12)
-      await prisma.user.create({
-        data: {
-          email,
-          name: displayName || email.split("@")[0],
-          password: hashedPassword,
+      const response = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
         },
-      })
+        body: JSON.stringify({
+          name: displayName || email.split("@")[0],
+          email,
+          password,
+        }),
+      });
 
+      if (!response.ok) {
+        const data = await response.json();
+        setError(data.message || "An error occurred during registration.");
+        setIsLoading(false);
+        return;
+      }
+
+      // Automatically sign in the user after successful registration
       const result = await signIn("credentials", {
         redirect: false,
         email,
         password,
-      })
+      });
 
       if (result?.error) {
-        setError(result.error)
+        setError(result.error);
       } else {
-        router.push("/dashboard")
+        router.push("/dashboard");
       }
     } catch (error: unknown) {
-      setError(error instanceof Error ? error.message : "An error occurred")
+      setError(error instanceof Error ? error.message : "An error occurred");
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
   }
 
