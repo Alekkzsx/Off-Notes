@@ -2,14 +2,15 @@
 
 import type React from "react"
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
-import Link from "next/link"
-import { signIn } from "next-auth/react"
+import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import Link from "next/link"
+import { useRouter } from "next/navigation"
+import { useState } from "react"
+import Image from "next/image"
 
 export default function RegisterPage() {
   const [email, setEmail] = useState("")
@@ -22,6 +23,7 @@ export default function RegisterPage() {
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault()
+    const supabase = createClient()
     setIsLoading(true)
     setError(null)
 
@@ -38,41 +40,22 @@ export default function RegisterPage() {
     }
 
     try {
-      const response = await fetch('/api/auth/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name: displayName || email.split("@")[0],
-          email,
-          password,
-        }),
-      });
-
-      if (!response.ok) {
-        const data = await response.json();
-        setError(data.message || "An error occurred during registration.");
-        setIsLoading(false);
-        return;
-      }
-
-      // Automatically sign in the user after successful registration
-      const result = await signIn("credentials", {
-        redirect: false,
+      const { error } = await supabase.auth.signUp({
         email,
         password,
-      });
-
-      if (result?.error) {
-        setError(result.error);
-      } else {
-        router.push("/dashboard");
-      }
+        options: {
+          emailRedirectTo: process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL || `${window.location.origin}/notes`,
+          data: {
+            display_name: displayName || email.split("@")[0],
+          },
+        },
+      })
+      if (error) throw error
+      router.push("/auth/sign-up-success")
     } catch (error: unknown) {
-      setError(error instanceof Error ? error.message : "An error occurred");
+      setError(error instanceof Error ? error.message : "An error occurred")
     } finally {
-      setIsLoading(false);
+      setIsLoading(false)
     }
   }
 
@@ -80,9 +63,16 @@ export default function RegisterPage() {
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <Card className="border-border/50">
-          <CardHeader className="text-center">
-            <CardTitle className="text-2xl font-semibold">Create account</CardTitle>
-            <CardDescription className="text-muted-foreground">Start your knowledge journey</CardDescription>
+          <CardHeader className="text-center space-y-4">
+            <div className="mx-auto w-16 h-16 relative">
+              <Image src="/favicon.ico" alt="Off Notes Logo" width={64} height={64} className="rounded-lg" />
+            </div>
+            <div>
+              <CardTitle className="text-2xl font-semibold">Create account</CardTitle>
+              <CardDescription className="text-muted-foreground">
+                Start your knowledge journey with Off Notes
+              </CardDescription>
+            </div>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleRegister} className="space-y-4">

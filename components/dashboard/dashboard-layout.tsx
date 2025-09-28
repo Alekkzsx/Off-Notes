@@ -1,22 +1,44 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { signOut } from "next-auth/react"
 import { useRouter } from "next/navigation"
-import prisma from "@/lib/auth"
+import { createClient } from "@/lib/supabase/client"
 import { Sidebar } from "./sidebar"
 import { NoteEditor } from "./note-editor"
+import { SettingsDialog } from "@/components/settings/settings-dialog"
 import { Button } from "@/components/ui/button"
-import { LogOut, Menu, X } from "lucide-react"
-import { type Note, type Folder } from "@prisma/client" // Import Prisma generated types
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { LogOut, Menu, X, Settings, User } from "lucide-react"
+import type { User as SupabaseUser } from "@supabase/supabase-js"
+
+interface Note {
+  id: string
+  title: string
+  content: string
+  folder_id: string | null
+  user_id: string
+  created_at: string
+  updated_at: string
+}
+
+interface Folder {
+  id: string
+  name: string
+  parent_id: string | null
+  user_id: string
+  created_at: string
+  updated_at: string
+}
 
 interface DashboardLayoutProps {
-  user: {
-    id: string
-    name?: string | null
-    email?: string | null
-    image?: string | null
-  }
+  user: SupabaseUser
 }
 
 export function DashboardLayout({ user }: DashboardLayoutProps) {
@@ -26,26 +48,34 @@ export function DashboardLayout({ user }: DashboardLayoutProps) {
   const [selectedFolder, setSelectedFolder] = useState<string | null>(null)
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [isLoading, setIsLoading] = useState(true)
+  const [showSettings, setShowSettings] = useState(false)
+  const [profile, setProfile] = useState<{ display_name: string | null; avatar_url: string | null } | null>(null)
   const router = useRouter()
+  const supabase = createClient()
 
   useEffect(() => {
     loadData()
+    loadProfile()
   }, [])
 
   const loadData = async () => {
     try {
       // Load folders
-      const foldersData = await prisma.folder.findMany({
-        where: { userId: user.id },
-        orderBy: { name: "asc" },
-      })
+      const { data: foldersData } = await supabase
+        .from("folders")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("name", { ascending: true })
+
       setFolders(foldersData || [])
 
       // Load notes
-      const notesData = await prisma.note.findMany({
-        where: { userId: user.id },
-        orderBy: { updatedAt: "desc" },
-      })
+      const { data: notesData } = await supabase
+        .from("notes")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("updated_at", { ascending: false })
+
       setNotes(notesData || [])
     } catch (error) {
       console.error("Error loading data:", error)
@@ -54,21 +84,35 @@ export function DashboardLayout({ user }: DashboardLayoutProps) {
     }
   }
 
+  const loadProfile = async () => {
+    try {
+      const { data } = await supabase.from("profiles").select("display_name, avatar_url").eq("id", user.id).single()
+
+      setProfile(data)
+    } catch (error) {
+      console.error("Error loading profile:", error)
+    }
+  }
+
   const handleSignOut = async () => {
-    await signOut({ redirect: false })
+    await supabase.auth.signOut()
     router.push("/")
   }
 
   const createNote = async (folderId?: string) => {
     try {
-      const newNote = await prisma.note.create({
-        data: {
+      const { data: newNote, error } = await supabase
+        .from("notes")
+        .insert({
           title: "Untitled",
           content: "",
-          folderId: folderId || null,
-          userId: user.id,
-        },
-      })
+          folder_id: folderId || null,
+          user_id: user.id,
+        })
+        .select()
+        .single()
+
+      if (error) throw error
 
       setNotes([newNote, ...notes])
       setSelectedNote(newNote)
@@ -79,15 +123,19 @@ export function DashboardLayout({ user }: DashboardLayoutProps) {
 
   const updateNote = async (noteId: string, updates: Partial<Note>) => {
     try {
-      const updatedNote = await prisma.note.update({
-        where: { id: noteId },
-        data: { ...updates, updatedAt: new Date() },
-      })
+      const { data: updatedNote, error } = await supabase
+        .from("notes")
+        .update({ ...updates, updated_at: new Date().toISOString() })
+        .eq("id", noteId)
+        .select()
+        .single()
 
-      setNotes(notes.map((note) => (note.id === noteId ? { ...note, ...updates, updatedAt: updatedNote.updatedAt } : note)))
+      if (error) throw error
+
+      setNotes(notes.map((note) => (note.id === noteId ? updatedNote : note)))
 
       if (selectedNote?.id === noteId) {
-        setSelectedNote({ ...selectedNote, ...updates, updatedAt: updatedNote.updatedAt })
+        setSelectedNote(updatedNote)
       }
     } catch (error) {
       console.error("Error updating note:", error)
@@ -96,9 +144,9 @@ export function DashboardLayout({ user }: DashboardLayoutProps) {
 
   const deleteNote = async (noteId: string) => {
     try {
-      await prisma.note.delete({
-        where: { id: noteId },
-      })
+      const { error } = await supabase.from("notes").delete().eq("id", noteId)
+
+      if (error) throw error
 
       setNotes(notes.filter((note) => note.id !== noteId))
       if (selectedNote?.id === noteId) {
@@ -111,13 +159,17 @@ export function DashboardLayout({ user }: DashboardLayoutProps) {
 
   const createFolder = async (name: string, parentId?: string) => {
     try {
-      const newFolder = await prisma.folder.create({
-        data: {
+      const { data: newFolder, error } = await supabase
+        .from("folders")
+        .insert({
           name,
-          parentId: parentId || null,
-          userId: user.id,
-        },
-      })
+          parent_id: parentId || null,
+          user_id: user.id,
+        })
+        .select()
+        .single()
+
+      if (error) throw error
 
       setFolders([...folders, newFolder])
     } catch (error) {
@@ -127,25 +179,37 @@ export function DashboardLayout({ user }: DashboardLayoutProps) {
 
   const deleteFolder = async (folderId: string) => {
     try {
-      await prisma.folder.delete({
-        where: { id: folderId },
-      })
+      const { error } = await supabase.from("folders").delete().eq("id", folderId)
+
+      if (error) throw error
 
       setFolders(folders.filter((folder) => folder.id !== folderId))
+
       // Move notes from deleted folder to root
-      await prisma.note.updateMany({
-        where: { folderId: folderId },
-        data: { folderId: null },
-      })
-      setNotes(notes.map((note) => (note.folderId === folderId ? { ...note, folderId: null } : note)))
+      const { error: updateError } = await supabase.from("notes").update({ folder_id: null }).eq("folder_id", folderId)
+
+      if (updateError) throw updateError
+
+      setNotes(notes.map((note) => (note.folder_id === folderId ? { ...note, folder_id: null } : note)))
     } catch (error) {
       console.error("Error deleting folder:", error)
     }
   }
 
   const filteredNotes = selectedFolder
-    ? notes.filter((note) => note.folderId === selectedFolder)
-    : notes.filter((note) => note.folderId === null)
+    ? notes.filter((note) => note.folder_id === selectedFolder)
+    : notes.filter((note) => note.folder_id === null)
+
+  const getInitials = (name: string) => {
+    return name
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2)
+  }
+
+  const displayName = profile?.display_name || user.email?.split("@")[0] || "User"
 
   if (isLoading) {
     return (
@@ -171,16 +235,34 @@ export function DashboardLayout({ user }: DashboardLayoutProps) {
       `}
       >
         <div className="flex items-center justify-between p-4 border-b border-border/50">
-          <h1 className="text-lg font-semibold">Obsidian Web</h1>
+          <h1 className="text-lg font-semibold">Off Notes</h1>
           <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleSignOut}
-              className="text-muted-foreground hover:text-foreground"
-            >
-              <LogOut className="w-4 h-4" />
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="flex items-center gap-2">
+                  <Avatar className="w-6 h-6">
+                    <AvatarImage src={profile?.avatar_url || ""} />
+                    <AvatarFallback className="text-xs">{getInitials(displayName)}</AvatarFallback>
+                  </Avatar>
+                  <span className="text-sm hidden sm:inline">{displayName}</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuItem onClick={() => setShowSettings(true)}>
+                  <User className="w-4 h-4 mr-2" />
+                  Profile
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setShowSettings(true)}>
+                  <Settings className="w-4 h-4 mr-2" />
+                  Settings
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleSignOut} className="text-destructive">
+                  <LogOut className="w-4 h-4 mr-2" />
+                  Sign Out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <Button variant="ghost" size="sm" onClick={() => setSidebarOpen(false)} className="lg:hidden">
               <X className="w-4 h-4" />
             </Button>
@@ -208,7 +290,13 @@ export function DashboardLayout({ user }: DashboardLayoutProps) {
           <Button variant="ghost" size="sm" onClick={() => setSidebarOpen(true)}>
             <Menu className="w-4 h-4" />
           </Button>
-          <div className="text-sm text-muted-foreground">{user.email}</div>
+          <div className="flex items-center gap-2">
+            <Avatar className="w-6 h-6">
+              <AvatarImage src={profile?.avatar_url || ""} />
+              <AvatarFallback className="text-xs">{getInitials(displayName)}</AvatarFallback>
+            </Avatar>
+            <span className="text-sm text-muted-foreground">{displayName}</span>
+          </div>
         </div>
 
         {/* Note editor */}
@@ -225,6 +313,8 @@ export function DashboardLayout({ user }: DashboardLayoutProps) {
           )}
         </div>
       </div>
+
+      <SettingsDialog open={showSettings} onOpenChange={setShowSettings} user={user} />
     </div>
   )
 }

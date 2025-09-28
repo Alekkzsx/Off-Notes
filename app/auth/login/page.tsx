@@ -2,14 +2,15 @@
 
 import type React from "react"
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
-import Link from "next/link"
-import { signIn } from "next-auth/react"
+import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import Link from "next/link"
+import { useRouter } from "next/navigation"
+import { useState } from "react"
+import Image from "next/image"
 
 export default function LoginPage() {
   const [email, setEmail] = useState("")
@@ -20,21 +21,17 @@ export default function LoginPage() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
+    const supabase = createClient()
     setIsLoading(true)
     setError(null)
 
     try {
-      const result = await signIn("credentials", {
-        redirect: false,
+      const { error } = await supabase.auth.signInWithPassword({
         email,
         password,
       })
-
-      if (result?.error) {
-        setError(result.error)
-      } else {
-        router.push("/dashboard")
-      }
+      if (error) throw error
+      router.push("/notes")
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : "An error occurred")
     } finally {
@@ -46,9 +43,14 @@ export default function LoginPage() {
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <Card className="border-border/50">
-          <CardHeader className="text-center">
-            <CardTitle className="text-2xl font-semibold">Welcome back</CardTitle>
-            <CardDescription className="text-muted-foreground">Sign in to your account</CardDescription>
+          <CardHeader className="text-center space-y-4">
+            <div className="mx-auto w-16 h-16 relative">
+              <Image src="/favicon.ico" alt="Off Notes Logo" width={64} height={64} className="rounded-lg" />
+            </div>
+            <div>
+              <CardTitle className="text-2xl font-semibold">Welcome back</CardTitle>
+              <CardDescription className="text-muted-foreground">Sign in to your Off Notes account</CardDescription>
+            </div>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleLogin} className="space-y-4">
